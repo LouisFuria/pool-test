@@ -1,121 +1,270 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" data-theme="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>ETH/USDC Pool · Base Sepolia</title>
-  <style>
-    :root { color-scheme: dark; }
-    body { margin:0; font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif; background: radial-gradient(1200px 600px at 20% -10%, #334155 0%, #0b0f19 45%, #000 100%); color: #fff; }
-    .wrap { max-width: 960px; margin: 32px auto; padding: 0 16px; }
-    .bar { display:flex; justify-content: space-between; align-items:center; gap:12px; margin-bottom:16px;}
-    .card { border:1px solid #ffffff18; background:#ffffff08; border-radius:16px; backdrop-filter: blur(6px); box-shadow: 0 10px 30px #0006; }
-    .card h3 { margin:0; padding:12px 16px; font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:#cbd5e1; border-bottom:1px solid #ffffff14;}
-    .card .content { padding:16px; }
-    .grid { display:grid; gap:16px; }
-    @media (min-width: 900px){ .grid-2{ grid-template-columns: 1fr 1fr; } .grid-3{ grid-template-columns: repeat(3,1fr);} }
-    .stat{ border:1px solid #ffffff18; background:#ffffff0d; border-radius:14px; padding:14px; }
-    .stat .l{ font-size:12px; color:#94a3b8; text-transform:uppercase; letter-spacing:.08em;}
-    .stat .v{ font-size:22px; font-weight:600; margin-top:4px;}
-    input{ width:100%; padding:12px 12px; border-radius:12px; border:1px solid #ffffff24; background:#00000040; color:#fff; outline:none; }
-    button{ cursor:pointer; border:none; border-radius:12px; padding:12px 14px; font-weight:600; }
-    .btn{ background:#fff; color:#000; }
-    .btn.outline{ background:transparent; color:#fff; border:1px solid #ffffff24; }
-    .row{ display:flex; gap:8px; }
-    .muted{ color:#94a3b8; font-size:12px; }
-    code{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
-    .warn{ background:#f59e0b22; border:1px solid #f59e0b55; color:#fde68a; padding:10px 12px; border-radius:12px; }
-  </style>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
   <!-- ethers v5 UMD (compatible <script>) -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --bg-elev: #0f1524;
+      --card: #11172b;
+      --muted: #9aa4b2;
+      --text: #e6e9ef;
+      --border: #1f2942;
+      --ok: #10b981;
+      --err: #ef4444;
+      --primary: #8b5cf6; /* violet */
+      --primary-2: #a78bfa;
+      --glow: 0 0 0px rgba(139,92,246,0), 0 0 0px rgba(139,92,246,0);
+    }
+    [data-theme="light"]{
+      --bg:#f7f7fb; --bg-elev:#ffffff; --card:#fff; --text:#0b1222; --muted:#5a6472; --border:#e7e9f2;
+      --glow: 0 0 0px rgba(139,92,246,0), 0 0 0px rgba(139,92,246,0);
+    }
+
+    *{ box-sizing:border-box }
+    html,body{ height:100% }
+    body{
+      margin:0; color:var(--text); background:
+      radial-gradient(1200px 600px at 20% -10%, #33415555 0%, transparent 40%),
+      radial-gradient(1000px 500px at 120% 10%, #6d28d955 0%, transparent 40%),
+      var(--bg);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    }
+    .wrap{ max-width:1100px; margin:32px auto 64px; padding:0 16px; }
+
+    /* Top bar */
+    .bar{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .title{ font-family:"Space Grotesk", Inter, sans-serif; font-size:28px; font-weight:800; letter-spacing:.2px; }
+    .sub{ color:var(--muted); font-size:12px; }
+    .pill{ display:inline-flex; align-items:center; gap:8px; background:var(--bg-elev); border:1px solid var(--border); padding:8px 12px; border-radius:999px; font-size:12px; color:var(--muted); }
+
+    /* Buttons */
+    .btn{ cursor:pointer; border:none; border-radius:14px; padding:12px 16px; font-weight:700; letter-spacing:.2px; transition: all .2s ease; }
+    .btn-primary{ background:var(--primary); color:#000; box-shadow: var(--glow); }
+    .btn-primary:hover{ transform: translateY(-1px); box-shadow: 0 10px 24px rgba(139,92,246,.35); }
+    .btn-ghost{ background:transparent; color:var(--text); border:1px solid var(--border); }
+    .btn-ghost:hover{ background-color:#ffffff0e; }
+    .btn-icon{ display:inline-flex; align-items:center; gap:10px; }
+    .btn:disabled{ opacity:.6; cursor:not-allowed; }
+
+    /* Layout */
+    .grid{ display:grid; gap:16px; }
+    .g-3{ grid-template-columns: 1fr; }
+    .g-2{ grid-template-columns: 1fr; }
+    @media (min-width: 900px){ .g-3{ grid-template-columns: repeat(3, 1fr); } .g-2{ grid-template-columns: repeat(2, 1fr); } }
+
+    /* Cards */
+    .card{ background:linear-gradient(180deg, #ffffff05, #00000000), var(--card); border:1px solid var(--border); border-radius:18px; backdrop-filter: blur(6px); }
+    .card-h{ padding:14px 18px; border-bottom:1px solid var(--border); text-transform:uppercase; letter-spacing:.1em; font-size:12px; color:var(--muted); }
+    .card-c{ padding:18px; }
+
+    /* Stats */
+    .stats{ display:grid; gap:16px; grid-template-columns: 1fr; }
+    @media(min-width: 900px){ .stats{ grid-template-columns: 2fr 2fr 1.5fr; } }
+    .stat{ display:flex; align-items:center; gap:14px; border:1px solid var(--border); background:var(--bg-elev); padding:16px; border-radius:18px; transition: transform .2s ease, box-shadow .2s ease; }
+    .stat:hover{ transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+    .stat .ico{ width:42px; height:42px; border-radius:12px; display:grid; place-items:center; background:#ffffff10; }
+    .stat .label{ color:var(--muted); text-transform:uppercase; letter-spacing:.12em; font-size:11px; }
+    .stat .value{ font-size:26px; font-weight:800; }
+
+    /* Inputs */
+    .row{ display:flex; gap:12px; align-items:center; }
+    .input{ width:100%; padding:14px 14px; border-radius:14px; background:var(--bg-elev); border:1px solid var(--border); color:var(--text); outline:none; font-size:15px; }
+    .input:focus{ border-color:var(--primary-2); box-shadow: 0 0 0 3px rgba(167,139,250,.15); }
+    .seg{ display:flex; background:var(--bg-elev); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+    .seg button{ flex:1; padding:10px 12px; font-weight:700; background:transparent; color:var(--muted); border:none; cursor:pointer; }
+    .seg button.active{ background: #ffffff0e; color: var(--text); }
+
+    .hint{ font-size:12px; color:var(--muted); }
+    .kpi{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+    .kpi .tile{ background:var(--bg-elev); border:1px solid var(--border); padding:12px 14px; border-radius:12px; }
+    .kpi .t{ font-size:12px; color:var(--muted); }
+    .kpi .v{ font-weight:700; }
+
+    /* Toasts */
+    .toasts{ position:fixed; right:16px; bottom:16px; display:flex; flex-direction:column; gap:10px; z-index:50; }
+    .toast{ padding:12px 14px; border-radius:12px; border:1px solid var(--border); background:var(--bg-elev); min-width:240px; box-shadow:0 6px 18px rgba(0,0,0,.3); }
+    .toast.ok{ border-color:#065f46; background:#065f4628; }
+    .toast.err{ border-color:#7f1d1d; background:#7f1d1d28; }
+
+    /* Modal */
+    .modal-back{ position:fixed; inset:0; background:#0008; display:none; place-items:center; z-index:60; }
+    .modal{ width:min(560px, 92vw); background:var(--card); border:1px solid var(--border); border-radius:16px; }
+    .modal .hd{ padding:16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+    .modal .bd{ padding:16px; }
+    .tag{ display:inline-flex; align-items:center; padding:6px 10px; border:1px solid var(--border); border-radius:999px; background:var(--bg-elev); font-size:12px; color:var(--muted); }
+
+    /* Spinner */
+    .spinner{ width:16px; height:16px; border:2px solid #ffffff66; border-top-color:#0000; border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin{ to{ transform: rotate(360deg) } }
+
+    /* Chart */
+    canvas{ width:100%; height:120px; background:linear-gradient(180deg, #ffffff03, transparent); border-radius:12px; border:1px solid var(--border); }
+  </style>
 </head>
 <body>
 <div class="wrap">
+
+  <!-- Top bar -->
   <div class="bar">
-    <h1 style="margin:0;font-size:22px;font-weight:700;">ETH/USDC Pool · Base Sepolia</h1>
+    <div>
+      <div class="title">ETH/USDC Pool <span class="sub">· Base Sepolia</span></div>
+      <div class="sub">Démo testnet — dépose/retire en ETH & USDC</div>
+    </div>
     <div class="row">
-      <button id="connectBtn" class="btn">Connect Wallet</button>
-      <span id="account" class="muted"></span>
+      <span id="netPill" class="pill">Réseau : inconnu</span>
+      <button id="themeBtn" class="btn btn-ghost" title="Basculer clair/sombre">🌓</button>
+      <button id="connectBtn" class="btn btn-primary btn-icon">🔗 Connect Wallet</button>
     </div>
   </div>
 
-  <div id="networkNote" class="warn" style="display:none;">Réseau incorrect. Sélectionne <b>Base Sepolia</b> dans MetaMask (chainId 84532).</div>
-
-  <div class="grid grid-3" style="margin-top:16px;">
-    <div class="stat"><div class="l">Total ETH</div><div class="v" id="totalEth">—</div></div>
-    <div class="stat"><div class="l">Total USDC</div><div class="v" id="totalUsdc">—</div></div>
-    <div class="stat"><div class="l">Connecté</div><div class="v" id="who">—</div></div>
-  </div>
-
-  <div class="grid grid-2" style="margin-top:16px;">
-    <div class="card">
-      <h3>Déposer</h3>
-      <div class="content grid">
-        <div>
-          <div class="l">Montant (ETH)</div>
-          <div class="row">
-            <input id="ethIn" placeholder="0.0" />
-            <button id="btnDepositEth" class="btn">Déposer</button>
-          </div>
-        </div>
-        <div>
-          <div class="l">Montant (USDC)</div>
-          <div class="row">
-            <input id="usdcIn" placeholder="0" />
-            <button id="btnDepositUsdc" class="btn">Déposer</button>
-          </div>
-          <div class="muted" id="usdcWallet">Solde wallet USDC: —</div>
-        </div>
-        <div class="muted" id="txStatus"></div>
+  <!-- Stats -->
+  <div class="stats" style="margin-top:18px;">
+    <div class="stat">
+      <div class="ico" aria-hidden="true">
+        <!-- ETH icon -->
+        <svg width="24" height="24" viewBox="0 0 256 417" fill="none"><path fill="#fff" fill-opacity=".9" d="M127.9 0l-3 10v270l3 3 127.9-75.5z"/><path fill="#fff" d="M127.9 0L0 207.5 127.9 283V0z"/><path fill="#fff" fill-opacity=".9" d="M127.9 306.9l-1.7 2v100.2l1.7 5 128-180.5z"/><path fill="#fff" d="M127.9 414l-128-180.5 128 73.4V414z"/></svg>
+      </div>
+      <div>
+        <div class="label">Total ETH</div>
+        <div class="value" id="totalEth">—</div>
       </div>
     </div>
 
-    <div class="card">
-      <h3>Retirer</h3>
-      <div class="content grid">
-        <div>
-          <div class="l">Montant (ETH)</div>
-          <div class="row">
-            <input id="ethOut" placeholder="0.0" />
-            <button id="btnWithdrawEth" class="btn outline">Retirer</button>
-          </div>
-        </div>
-        <div>
-          <div class="l">Montant (USDC)</div>
-          <div class="row">
-            <input id="usdcOut" placeholder="0" />
-            <button id="btnWithdrawUsdc" class="btn outline">Retirer</button>
-          </div>
-        </div>
+    <div class="stat">
+      <div class="ico" aria-hidden="true">
+        <!-- USDC icon -->
+        <svg width="42" height="42" viewBox="0 0 256 256"><circle cx="128" cy="128" r="128" fill="#2775CA"/><path fill="#fff" d="M168 140.8c0-21.1-12.7-28.3-38.1-31.4c-18.1-2.1-21.8-6.3-21.8-13.7c0-7.4 5.4-12.3 16.2-12.3c9.7 0 15.8 3.3 18.9 11.2c.9 2.3 3 3.7 5.5 3.7h8.7c3.2 0 5.8-2.6 5.8-5.8c0-.8-.2-1.6-.5-2.3c-5.1-14.6-17.8-23.2-33.8-24.4v-14c0-3.2-2.6-5.8-5.8-5.8h-8.6c-3.2 0-5.8 2.6-5.8 5.8v13.7c-22.8 3.3-36.6 17.8-36.6 36.4c0 20 12.1 28.5 37.8 31.7c17.7 2.5 22.1 6.1 22.1 13.9c0 7.2-6.5 12.2-17.1 12.2c-13.9 0-19.1-5.7-21.3-12.8c-.8-2.6-3.1-4.4-5.8-4.4h-8.8c-3.2 0-5.8 2.6-5.8 5.8c0 .7.1 1.4.4 2.1c4.9 16 17.3 26.1 36 28.6v13.7c0 3.2 2.6 5.8 5.8 5.8h8.6c3.2 0 5.8-2.6 5.8-5.8v-13.9c24.1-3.6 38.1-18 38.1-36.7z"/></svg>
+      </div>
+      <div>
+        <div class="label">Total USDC</div>
+        <div class="value" id="totalUsdc">—</div>
+      </div>
+    </div>
+
+    <div class="stat">
+      <div class="ico" aria-hidden="true">👤</div>
+      <div>
+        <div class="label">Connecté</div>
+        <div class="value" id="who">—</div>
       </div>
     </div>
   </div>
 
-  <div class="grid grid-2" style="margin-top:16px;">
+  <!-- Graph -->
+  <div class="card" style="margin-top:16px;">
+    <div class="card-h">Évolution (session) — Totaux pool</div>
+    <div class="card-c">
+      <canvas id="chart" width="1000" height="120" aria-label="Graphique des totaux"></canvas>
+      <div class="hint" style="margin-top:8px;">Courbe ETH (gauche) & USDC (droite, echelle propre). Actualisé à chaque refresh.</div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="grid g-2" style="margin-top:16px;">
+    <!-- Deposit -->
     <div class="card">
-      <h3>Ta position</h3>
-      <div class="content grid grid-2">
-        <div class="stat"><div class="l">ETH déposé</div><div class="v" id="myEth">—</div></div>
-        <div class="stat"><div class="l">USDC déposé</div><div class="v" id="myUsdc">—</div></div>
+      <div class="card-h">Déposer</div>
+      <div class="card-c">
+        <div class="row" style="margin-bottom:10px;">
+          <div class="seg" role="tablist" aria-label="Choisir l'actif">
+            <button id="depETH" class="active" role="tab" aria-selected="true">ETH ⬆️</button>
+            <button id="depUSDC" role="tab" aria-selected="false">USDC ⬆️</button>
+          </div>
+          <input id="rate" class="input" type="number" step="0.01" min="0" style="max-width:220px" title="Taux de conversion"
+                 placeholder="Taux 1 ETH = ? USDC (ex 3000)" />
+        </div>
+        <div class="row">
+          <input id="depAmount" class="input" inputmode="decimal" placeholder="Entrez un montant (ex : 0.1)" aria-label="Montant à déposer" />
+          <button id="btnDeposit" class="btn btn-primary btn-icon"><span class="btnText">Déposer</span> <span class="btnIco">⬆️</span></button>
+        </div>
+        <div class="hint" style="margin-top:8px;" id="depEq">≈ —</div>
       </div>
     </div>
+
+    <!-- Withdraw -->
     <div class="card">
-      <h3>Infos contrat</h3>
-      <div class="content">
-        <div class="muted">Pool: <code id="poolAddr"></code></div>
-        <div class="muted">USDC: <code id="usdcAddr"></code></div>
-        <div class="muted">Réseau: Base Sepolia (84532)</div>
+      <div class="card-h">Retirer</div>
+      <div class="card-c">
+        <div class="row" style="margin-bottom:10px;">
+          <div class="seg" role="tablist" aria-label="Choisir l'actif">
+            <button id="wdETH" class="active" role="tab" aria-selected="true">ETH ⬇️</button>
+            <button id="wdUSDC" role="tab" aria-selected="false">USDC ⬇️</button>
+          </div>
+        </div>
+        <div class="row">
+          <input id="wdAmount" class="input" inputmode="decimal" placeholder="Entrez un montant (ex : 0.05)" aria-label="Montant à retirer" />
+          <button id="btnWithdraw" class="btn btn-ghost btn-icon"><span class="btnText">Retirer</span> <span class="btnIco">⬇️</span></button>
+        </div>
+        <div class="hint" style="margin-top:8px;">Tu peux retirer jusqu'à ton solde déposé.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- User dashboard -->
+  <div class="grid g-2" style="margin-top:16px;">
+    <div class="card">
+      <div class="card-h">Ta position</div>
+      <div class="card-c">
+        <div class="kpi">
+          <div class="tile"><div class="t">ETH déposé</div><div class="v" id="myEth">—</div></div>
+          <div class="tile"><div class="t">USDC déposé</div><div class="v" id="myUsdc">—</div></div>
+          <div class="tile"><div class="t">Valeur totale ($)</div><div class="v" id="myUsd">—</div></div>
+          <div class="tile"><div class="t">Part de la pool</div><div class="v" id="myShare">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">Aide & Réseau</div>
+      <div class="card-c">
+        <div class="row" style="margin-bottom:10px;">
+          <button id="switchBtn" class="btn btn-ghost">Basculer sur Base Sepolia</button>
+          <button id="infoBtn" class="btn btn-ghost">Infos contrat</button>
+        </div>
+        <div class="hint">Conseil : vérifie le réseau, puis dépose. Les montants USDC utilisent 6 décimales.</div>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Modal Contract Info -->
+<div id="modalBack" class="modal-back" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <div class="hd">
+      <div id="mTitle" style="font-weight:700;">Infos contrat</div>
+      <button id="closeModal" class="btn btn-ghost">✖</button>
+    </div>
+    <div class="bd">
+      <div style="display:grid; gap:10px;">
+        <div><span class="t">Pool :</span> <code id="poolAddr"></code></div>
+        <div><span class="t">USDC :</span> <code id="usdcAddr"></code></div>
+        <div><span class="t">Réseau :</span> <span class="tag">Base Sepolia (84532)</span></div>
+      </div>
+      <div class="hint" style="margin-top:12px;">Ces adresses sont publiques (Basescan). Aucune clé privée n’est exposée.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div class="toasts" id="toasts" aria-live="polite" aria-atomic="true"></div>
+
 <script>
 (async () => {
-  // ==== REMPLACE ICI PAR TES ADRESSES ====
+  // ====== ⚙️ ADRESSES À REMPLACER ======
   const POOL_ADDRESS = "0xfC39B74a0c3AD291f88224ec620410c32f3659e4";
   const USDC_ADDRESS = "0x3F532813FEB32E1990d9c7Ca8Cb29b62C573512B";
 
+  // ====== ABIs ======
   const VAULT_ABI = [
     { "type":"function","name":"depositETH","stateMutability":"payable","inputs":[],"outputs":[] },
     { "type":"function","name":"depositUSDC","stateMutability":"nonpayable","inputs":[{"name":"amount","type":"uint256"}],"outputs":[] },
@@ -134,151 +283,276 @@
     { "type":"function","name":"transferFrom","stateMutability":"nonpayable","inputs":[{"name":"from","type":"address"},{"name":"to","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"type":"bool"}] }
   ];
 
-  document.getElementById("poolAddr").textContent = POOL_ADDRESS;
-  document.getElementById("usdcAddr").textContent = USDC_ADDRESS;
+  // ====== Elements ======
+  const $ = (id)=>document.getElementById(id);
+  const toasts = $("toasts");
+  const chartEl = $("chart");
+  const ctx = chartEl.getContext("2d");
 
-  if (!window.ethereum) { alert("Installe MetaMask pour utiliser la dApp."); return; }
+  // ====== State ======
+  let provider=null, signer=null, account=null, usdcDec=6;
+  let assetDep = "ETH"; // ETH | USDC
+  let assetWdr = "ETH";
+  let rate = Number(localStorage.getItem("rate") || "3000");
 
-  const provider = new ethers.providers.Web3Provider(window.ethereum);
-  let signer = null, account = null;
+  // ====== Utils ======
+  const fmtEth = (wei)=> ethers.utils.formatEther(wei || "0");
+  const fmt = (x,dec=6)=> ethers.utils.formatUnits(x || "0", dec);
+  const parse = (s,dec=6)=> ethers.utils.parseUnits((s||"0").trim()||"0", dec);
+  const sleep = (ms)=> new Promise(r=>setTimeout(r,ms));
 
-  const vaultRO = new ethers.Contract(POOL_ADDRESS, VAULT_ABI, provider);
-  const usdcRO  = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, provider);
-
-  const $ = (id) => document.getElementById(id);
-  const fmtEth = (wei) => ethers.utils.formatEther(wei || "0");
-  const fmt = (x, dec=6) => ethers.utils.formatUnits(x || "0", dec);
-  const parse = (s, dec=6) => ethers.utils.parseUnits((s || "0").trim(), dec);
-
-  async function refresh() {
-    try {
-      const net = await provider.getNetwork();
-      $("networkNote").style.display = (Number(net.chainId) === 84532) ? "none" : "block";
-
-      const [tEth, tUsdc] = await Promise.all([ vaultRO.totalETH(), vaultRO.totalUSDC() ]);
-      $("totalEth").textContent = fmtEth(tEth) + " ETH";
-
-      let usdcDec = 6; try { usdcDec = await usdcRO.decimals(); } catch {}
-      $("totalUsdc").textContent = fmt(tUsdc, usdcDec) + " USDC";
-
-      if (account) {
-        const [uEth, uUsdc, wUsdc] = await Promise.all([
-          vaultRO.userETH(account),
-          vaultRO.userUSDC(account),
-          usdcRO.balanceOf(account),
-        ]);
-        $("myEth").textContent  = fmtEth(uEth) + " ETH";
-        $("myUsdc").textContent = fmt(uUsdc, usdcDec) + " USDC";
-        $("usdcWallet").textContent = "Solde wallet USDC: " + fmt(wUsdc, usdcDec);
-      }
-    } catch(e){ console.error(e); }
+  function notify(msg, type="ok"){ // ok | err
+    const div = document.createElement("div");
+    div.className = `toast ${type}`;
+    div.textContent = msg;
+    toasts.appendChild(div);
+    setTimeout(()=>{ div.style.opacity=".0"; div.style.transform="translateY(6px)"; }, 2600);
+    setTimeout(()=> div.remove(), 3200);
   }
 
-  $("connectBtn").onclick = async () => {
-    try {
-      await window.ethereum.request({ method: "eth_requestAccounts" });
-      signer = provider.getSigner();
-      account = await signer.getAddress();
-      $("account").textContent = account.slice(0,6) + "…" + account.slice(-4);
-      $("who").textContent = $("account").textContent;
+  function setLoading(btn, loading){
+    const txt = btn.querySelector(".btnText");
+    const ico = btn.querySelector(".btnIco");
+    if(loading){
+      btn.disabled = true;
+      if(ico) ico.innerHTML = `<span class="spinner" aria-hidden="true"></span>`;
+    }else{
+      btn.disabled = false;
+      if(ico) ico.textContent = btn === $("btnDeposit") ? "⬆️" : "⬇️";
+    }
+  }
 
-      window.vault = new ethers.Contract(POOL_ADDRESS, VAULT_ABI, signer);
-      window.usdc  = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, signer);
+  function setTheme(next){
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("theme", next);
+  }
+  (function initTheme(){
+    const saved = localStorage.getItem("theme");
+    if(saved) setTheme(saved);
+  })();
 
-      const net = await provider.getNetwork();
-      if (Number(net.chainId) !== 84532) {
-        try {
-          await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x14A74" }] });
-        } catch (err) {
-          if (err.code === 4902) {
-            await window.ethereum.request({
-              method: "wallet_addEthereumChain",
-              params: [{
-                chainId: "0x14A74",
-                chainName: "Base Sepolia",
-                rpcUrls: ["https://sepolia.base.org"],
-                nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
-                blockExplorerUrls: ["https://sepolia.basescan.org"]
-              }]
-            });
-          }
+  // ====== Wallet / Network ======
+  if(!window.ethereum){
+    notify("Installe MetaMask pour utiliser la dApp.", "err");
+  }else{
+    provider = new ethers.providers.Web3Provider(window.ethereum);
+  }
+
+  async function updateNetPill(){
+    const net = await provider.getNetwork();
+    const onBase = Number(net.chainId) === 84532;
+    $("netPill").textContent = `Réseau : ${onBase ? "Base Sepolia ✅" : net.name + " ("+net.chainId+")"}`;
+    $("netPill").style.color = onBase ? "#10b981" : "#fbbf24";
+  }
+
+  async function connect(){
+    await window.ethereum.request({ method:"eth_requestAccounts" });
+    signer = provider.getSigner();
+    account = await signer.getAddress();
+    $("who").textContent = account.slice(0,6)+"…"+account.slice(-4);
+    notify("Wallet connecté ✅", "ok");
+    await ensureBase();
+    await initContracts();
+    await refresh(true);
+  }
+
+  async function ensureBase(){
+    const net = await provider.getNetwork();
+    if(Number(net.chainId) !== 84532){
+      try{
+        await window.ethereum.request({ method:"wallet_switchEthereumChain", params:[{ chainId:"0x14A74" }] });
+      }catch(err){
+        if(err.code === 4902){
+          await window.ethereum.request({
+            method:"wallet_addEthereumChain",
+            params:[{ chainId:"0x14A74", chainName:"Base Sepolia", rpcUrls:["https://sepolia.base.org"], nativeCurrency:{ name:"ETH", symbol:"ETH", decimals:18 }, blockExplorerUrls:["https://sepolia.basescan.org"] }]
+          });
+        }else{
+          notify("Impossible de basculer sur Base Sepolia.", "err");
         }
       }
-      await refresh();
-    } catch (e) { console.error(e); alert("Connexion refusée ou bloquée par le navigateur."); }
-  };
-
-  $("btnDepositEth").onclick = async () => {
-    if (!signer) return alert("Connecte ton wallet");
-    const amt = ($("ethIn").value || "0").trim();
-    if (!amt) return;
-    try {
-      $("txStatus").textContent = "Transaction en cours (depositETH)…";
-      const tx = await window.vault.depositETH({ value: ethers.utils.parseEther(amt) });
-      await tx.wait();
-      $("txStatus").textContent = "✅ Dépôt ETH confirmé";
-      $("ethIn").value = "";
-      await refresh();
-    } catch (e) { $("txStatus").textContent = "❌ Échec dépôt ETH"; console.error(e); }
-  };
-
-  $("btnDepositUsdc").onclick = async () => {
-    if (!signer) return alert("Connecte ton wallet");
-    const amtStr = ($("usdcIn").value || "0").trim();
-    if (!amtStr) return;
-    try {
-      let dec = 6; try { dec = await window.usdc.decimals(); } catch {}
-      const amount = parse(amtStr, dec);
-      const allowance = await window.usdc.allowance(account, POOL_ADDRESS);
-      if (allowance.lt(amount)) {
-        $("txStatus").textContent = "Approval USDC…";
-        const txA = await window.usdc.approve(POOL_ADDRESS, amount);
-        await txA.wait();
-      }
-      $("txStatus").textContent = "Transaction en cours (depositUSDC)…";
-      const tx = await window.vault.depositUSDC(amount);
-      await tx.wait();
-      $("txStatus").textContent = "✅ Dépôt USDC confirmé";
-      $("usdcIn").value = "";
-      await refresh();
-    } catch (e) { $("txStatus").textContent = "❌ Échec dépôt USDC"; console.error(e); }
-  };
-
-  $("btnWithdrawEth").onclick = async () => {
-    if (!signer) return alert("Connecte ton wallet");
-    const amt = ($("ethOut").value || "0").trim();
-    if (!amt) return;
-    try {
-      $("txStatus").textContent = "Transaction en cours (withdrawETH)…";
-      const tx = await window.vault.withdrawETH(ethers.utils.parseEther(amt));
-      await tx.wait();
-      $("txStatus").textContent = "✅ Retrait ETH confirmé";
-      $("ethOut").value = "";
-      await refresh();
-    } catch (e) { $("txStatus").textContent = "❌ Échec retrait ETH"; console.error(e); }
-  };
-
-  $("btnWithdrawUsdc").onclick = async () => {
-    if (!signer) return alert("Connecte ton wallet");
-    const amtStr = ($("usdcOut").value || "0").trim();
-    if (!amtStr) return;
-    try {
-      let dec = 6; try { dec = await window.usdc.decimals(); } catch {}
-      $("txStatus").textContent = "Transaction en cours (withdrawUSDC)…";
-      const tx = await window.vault.withdrawUSDC(parse(amtStr, dec));
-      await tx.wait();
-      $("txStatus").textContent = "✅ Retrait USDC confirmé";
-      $("usdcOut").value = "";
-      await refresh();
-    } catch (e) { $("txStatus").textContent = "❌ Échec retrait USDC"; console.error(e); }
-  };
-
-  // reload si compte / réseau change
-  if (window.ethereum) {
-    window.ethereum.on?.("accountsChanged", () => location.reload());
-    window.ethereum.on?.("chainChanged", () => location.reload());
+    }
+    await updateNetPill();
   }
-  await refresh();
+
+  let vaultRO, usdcRO, vaultRW, usdcRW;
+  async function initContracts(){
+    vaultRO = new ethers.Contract(POOL_ADDRESS, VAULT_ABI, provider);
+    usdcRO  = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, provider);
+    if(signer){ vaultRW = vaultRO.connect(signer); usdcRW = usdcRO.connect(signer); }
+    try{ usdcDec = await usdcRO.decimals(); }catch{}
+    $("poolAddr").textContent = POOL_ADDRESS;
+    $("usdcAddr").textContent = USDC_ADDRESS;
+  }
+
+  // ====== UI controls ======
+  $("themeBtn").onclick = ()=> {
+    const cur = document.documentElement.getAttribute("data-theme") || "dark";
+    setTheme(cur === "dark" ? "light" : "dark");
+  };
+  $("connectBtn").onclick = connect;
+  $("switchBtn").onclick  = ensureBase;
+
+  const modalBack = $("modalBack");
+  $("infoBtn").onclick = ()=> { modalBack.style.display="grid"; modalBack.setAttribute("aria-hidden","false"); };
+  $("closeModal").onclick = ()=> { modalBack.style.display="none"; modalBack.setAttribute("aria-hidden","true"); };
+  modalBack.addEventListener("click", (e)=>{ if(e.target===modalBack) $("closeModal").click(); });
+
+  // Deposit tab
+  $("depETH").onclick = ()=>{ assetDep="ETH"; $("depETH").classList.add("active"); $("depUSDC").classList.remove("active"); updateDepEq(); };
+  $("depUSDC").onclick = ()=>{ assetDep="USDC"; $("depUSDC").classList.add("active"); $("depETH").classList.remove("active"); updateDepEq(); };
+  // Withdraw tab
+  $("wdETH").onclick = ()=>{ assetWdr="ETH"; $("wdETH").classList.add("active"); $("wdUSDC").classList.remove("active"); };
+  $("wdUSDC").onclick = ()=>{ assetWdr="USDC"; $("wdUSDC").classList.add("active"); $("wdETH").classList.remove("active"); };
+
+  // Inputs
+  $("rate").value = String(rate);
+  $("rate").oninput = ()=>{ rate = Number($("rate").value || "0"); localStorage.setItem("rate", String(rate)); updateDepEq(); updateUsdBlock(); };
+  $("depAmount").oninput = updateDepEq();
+
+  function updateDepEq(){
+    const v = Number(($("depAmount").value || "0").trim());
+    if(!v || !rate){ $("depEq").textContent = "≈ —"; return; }
+    if(assetDep==="ETH") $("depEq").textContent = `≈ ${(v*rate).toLocaleString(undefined,{maximumFractionDigits:2})} USDC (taux ${rate})`;
+    else $("depEq").textContent = `≈ ${(v/rate).toLocaleString(undefined,{maximumFractionDigits:6})} ETH (taux ${rate})`;
+  }
+
+  // ====== Actions ======
+  $("btnDeposit").onclick = async ()=>{
+    if(!signer) return notify("Connecte ton wallet", "err");
+    const amtStr = ($("depAmount").value || "0").trim();
+    if(!amtStr || Number(amtStr)<=0) return;
+    setLoading($("btnDeposit"), true);
+    try{
+      if(assetDep==="ETH"){
+        const tx = await vaultRW.depositETH({ value: ethers.utils.parseEther(amtStr) });
+        await tx.wait();
+        notify(`✅ Dépôt ${amtStr} ETH confirmé`);
+      }else{
+        const amount = parse(amtStr, usdcDec);
+        const allowance = await usdcRW.allowance(account, POOL_ADDRESS);
+        if(allowance.lt(amount)){
+          const txA = await usdcRW.approve(POOL_ADDRESS, amount);
+          await txA.wait();
+        }
+        const tx = await vaultRW.depositUSDC(amount);
+        await tx.wait();
+        notify(`✅ Dépôt ${amtStr} USDC confirmé`);
+      }
+      $("depAmount").value = "";
+      updateDepEq();
+      await refresh(true);
+    }catch(e){ console.error(e); notify("❌ Échec du dépôt", "err"); }
+    finally{ setLoading($("btnDeposit"), false); }
+  };
+
+  $("btnWithdraw").onclick = async ()=>{
+    if(!signer) return notify("Connecte ton wallet", "err");
+    const amtStr = ($("wdAmount").value || "0").trim();
+    if(!amtStr || Number(amtStr)<=0) return;
+    setLoading($("btnWithdraw"), true);
+    try{
+      if(assetWdr==="ETH"){
+        const tx = await vaultRW.withdrawETH(ethers.utils.parseEther(amtStr));
+        await tx.wait();
+        notify(`✅ Retrait ${amtStr} ETH confirmé`);
+      }else{
+        const tx = await vaultRW.withdrawUSDC(parse(amtStr, usdcDec));
+        await tx.wait();
+        notify(`✅ Retrait ${amtStr} USDC confirmé`);
+      }
+      $("wdAmount").value = "";
+      await refresh(true);
+    }catch(e){ console.error(e); notify("❌ Échec du retrait", "err"); }
+    finally{ setLoading($("btnWithdraw"), false); }
+  };
+
+  // ====== Data refresh + chart ======
+  const hist = { t:[], eth:[], usdc:[] };
+
+  function drawChart(){
+    const w = chartEl.width, h = chartEl.height;
+    ctx.clearRect(0,0,w,h);
+    if(hist.t.length<2) return;
+
+    // ETH line (left scale)
+    const eMax = Math.max(...hist.eth);
+    const eMin = Math.min(...hist.eth);
+    const pad = 8;
+    const xStep = (w - pad*2) / (hist.eth.length - 1);
+    ctx.beginPath();
+    hist.eth.forEach((v,i)=>{
+      const x = pad + i*xStep;
+      const y = h - pad - ((v - eMin) / Math.max(1,(eMax-eMin))) * (h - pad*2);
+      i? ctx.lineTo(x,y): ctx.moveTo(x,y);
+    });
+    ctx.strokeStyle = "#ffffffcc";
+    ctx.lineWidth = 2; ctx.stroke();
+
+    // USDC line (right scale, lighter)
+    const uMax = Math.max(...hist.usdc);
+    const uMin = Math.min(...hist.usdc);
+    ctx.beginPath();
+    hist.usdc.forEach((v,i)=>{
+      const x = pad + i*xStep;
+      const y = h - pad - ((v - uMin) / Math.max(1,(uMax-uMin))) * (h - pad*2);
+      i? ctx.lineTo(x,y): ctx.moveTo(x,y);
+    });
+    ctx.strokeStyle = "#8b5cf6";
+    ctx.lineWidth = 2; ctx.setLineDash([4,3]); ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  async function refresh(pushPoint=false){
+    try{
+      await updateNetPill();
+      // Totaux
+      const [tEth, tUsdc] = await Promise.all([ vaultRO.totalETH(), vaultRO.totalUSDC() ]);
+      $("totalEth").textContent  = fmtEth(tEth) + " ETH";
+      $("totalUsdc").textContent = fmt(tUsdc, usdcDec) + " USDC";
+
+      if(account){
+        const [uEth, uUsdc] = await Promise.all([ vaultRO.userETH(account), vaultRO.userUSDC(account) ]);
+        $("myEth").textContent = fmtEth(uEth) + " ETH";
+        $("myUsdc").textContent = fmt(uUsdc, usdcDec) + " USDC";
+
+        const ethNum  = Number(ethers.utils.formatEther(uEth || "0"));
+        const usdcNum = Number(ethers.utils.formatUnits(uUsdc || "0", usdcDec));
+        const totalEthNum  = Number(ethers.utils.formatEther(tEth || "0"));
+        const totalUsdcNum = Number(ethers.utils.formatUnits(tUsdc || "0", usdcDec));
+
+        const myUsd = ethNum * (rate||0) + usdcNum;
+        $("myUsd").textContent = isFinite(myUsd) ? myUsd.toLocaleString(undefined,{maximumFractionDigits:2}) : "—";
+
+        const poolUsd = (totalEthNum*(rate||0) + totalUsdcNum) || 0;
+        const myUsdSafe = myUsd || 0;
+        const share = poolUsd>0 ? (myUsdSafe/poolUsd*100) : 0;
+        $("myShare").textContent = isFinite(share) ? share.toFixed(2) + "%" : "—";
+
+        updateDepEq();
+      }
+
+      if(pushPoint){
+        const ethn = Number(ethers.utils.formatEther(await vaultRO.totalETH()));
+        const usdcn= Number(ethers.utils.formatUnits(await vaultRO.totalUSDC(), usdcDec));
+        hist.t.push(Date.now()); hist.eth.push(ethn); hist.usdc.push(usdcn);
+        if(hist.t.length>60){ hist.t.shift(); hist.eth.shift(); hist.usdc.shift(); }
+        drawChart();
+      }
+    }catch(e){ console.error(e); }
+  }
+
+  // periodic refresh (and chart point)
+  setInterval(()=> refresh(true), 10000);
+
+  // react to wallet changes
+  if(window.ethereum){
+    window.ethereum.on?.("accountsChanged", ()=> location.reload());
+    window.ethereum.on?.("chainChanged", ()=> location.reload());
+  }
+
+  // initial
+  await initContracts();
+  await refresh(true);
 })();
 </script>
 </body>
