@@ -7,7 +7,6 @@
 
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-
   <!-- ethers v5 UMD -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
@@ -15,7 +14,7 @@
     :root {
       --bg: #0b0f19; --bg-elev: #0f1524; --card: #11172b; --muted: #9aa4b2;
       --text: #e6e9ef; --border: #1f2942; --ok: #10b981; --err: #ef4444;
-      --primary: #8b5cf6; --primary-2: #a78bfa; --glow: 0 0 0 rgba(0,0,0,0);
+      --primary: #8b5cf6; --primary-2: #a78bfa;
     }
     [data-theme="light"]{ --bg:#f7f7fb; --bg-elev:#ffffff; --card:#fff; --text:#0b1222; --muted:#5a6472; --border:#e7e9f2; }
 
@@ -194,6 +193,7 @@
           <div class="tile"><div class="t">USDC déposé</div><div class="v" id="myUsdc">—</div></div>
           <div class="tile"><div class="t">Valeur totale ($)</div><div class="v" id="myUsd">—</div></div>
           <div class="tile"><div class="t">Part de la pool</div><div class="v" id="myShare">—</div></div>
+          <div class="tile"><div class="t">Points</div><div class="v" id="myPts">—</div></div>
         </div>
       </div>
     </div>
@@ -201,11 +201,12 @@
     <div class="card">
       <div class="card-h">Aide & Réseau</div>
       <div class="card-c">
-        <div class="row" style="margin-bottom:10px;">
+        <div class="row" style="margin-bottom:10px; flex-wrap: wrap;">
           <button id="switchBtn" class="btn btn-ghost">Basculer sur Base Sepolia</button>
           <button id="infoBtn" class="btn btn-ghost">Infos contrat</button>
+          <button id="pushRateBtn" class="btn btn-ghost">Pousser prix ETH → on-chain</button>
         </div>
-        <div class="hint">Conseil : vérifie le réseau, puis dépose. Les montants USDC utilisent 6 décimales.</div>
+        <div class="hint">Le prix sert à valoriser l’ETH en $. Les points montent en temps réel : <b>1 point / minute / $</b>.</div>
       </div>
     </div>
   </div>
@@ -234,11 +235,12 @@
 
 <script>
 (async () => {
-  // ⚙️ TES ADRESSES (déjà remplies)
-  const POOL_ADDRESS = "0x1720e9ef567d1f29076EcE7E47CBc5F12F52F335";
+  // ⚙️ ADRESSES
+  const POOL_ADDRESS = "0x1720e9ef567d1f29076EcE7E47CBc5F12F52F335"; // nouveau vault with points
   const USDC_ADDRESS = "0x3F532813FEB32E1990d9c7Ca8Cb29b62C573512B";
 
-  // ABIs (contrat simple sans points)
+  // ===== ABIs =====
+  // Vault WITH POINTS (ajouts: pointsOf, pendingPointsScaled, claimPoints, ethUsd, setEthUsd)
   const VAULT_ABI = [
     { "type":"function","name":"depositETH","stateMutability":"payable","inputs":[],"outputs":[] },
     { "type":"function","name":"depositUSDC","stateMutability":"nonpayable","inputs":[{"name":"amount","type":"uint256"}],"outputs":[] },
@@ -247,7 +249,13 @@
     { "type":"function","name":"totalETH","stateMutability":"view","inputs":[],"outputs":[{"type":"uint256"}] },
     { "type":"function","name":"totalUSDC","stateMutability":"view","inputs":[],"outputs":[{"type":"uint256"}] },
     { "type":"function","name":"userETH","stateMutability":"view","inputs":[{"name":"u","type":"address"}],"outputs":[{"type":"uint256"}] },
-    { "type":"function","name":"userUSDC","stateMutability":"view","inputs":[{"name":"u","type":"address"}],"outputs":[{"type":"uint256"}] }
+    { "type":"function","name":"userUSDC","stateMutability":"view","inputs":[{"name":"u","type":"address"}],"outputs":[{"type":"uint256"}] },
+
+    { "type":"function","name":"pointsOf","stateMutability":"view","inputs":[{"name":"u","type":"address"}],"outputs":[{"name":"points","type":"uint256"},{"name":"decimals_","type":"uint8"}] },
+    { "type":"function","name":"pendingPointsScaled","stateMutability":"view","inputs":[{"name":"u","type":"address"}],"outputs":[{"type":"uint256"}] },
+    { "type":"function","name":"claimPoints","stateMutability":"nonpayable","inputs":[],"outputs":[] },
+    { "type":"function","name":"ethUsd","stateMutability":"view","inputs":[],"outputs":[{"type":"uint256"}] },
+    { "type":"function","name":"setEthUsd","stateMutability":"nonpayable","inputs":[{"name":"_price8","type":"uint256"}],"outputs":[] }
   ];
   const ERC20_ABI = [
     { "type":"function","name":"decimals","stateMutability":"view","inputs":[],"outputs":[{"type":"uint8"}] },
@@ -257,19 +265,17 @@
     { "type":"function","name":"transferFrom","stateMutability":"nonpayable","inputs":[{"name":"from","type":"address"},{"name":"to","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"type":"bool"}] }
   ];
 
-  // Elements
+  // ===== Elements & state =====
   const $ = (id)=>document.getElementById(id);
   const toasts = $("toasts");
   const chartEl = $("chart");
   const ctx = chartEl.getContext("2d");
 
-  // State
   let provider=null, signer=null, account=null, usdcDec=6;
-  let assetDep = "ETH"; // ETH | USDC
-  let assetWdr = "ETH";
-  let rate = Number(localStorage.getItem("rate") || "3000");
+  let assetDep="ETH", assetWdr="ETH";
+  let rate = Number(localStorage.getItem("rate") || "3000"); // UI rate (peut être poussé on-chain si owner)
 
-  // Utils
+  // ===== Utils =====
   const fmtEth = (wei)=> ethers.utils.formatEther(wei || "0");
   const fmt = (x,dec=6)=> ethers.utils.formatUnits(x || "0", dec);
   const parse = (s,dec=6)=> ethers.utils.parseUnits((s||"0").trim()||"0", dec);
@@ -345,7 +351,7 @@
   $("wdUSDC").onclick = ()=>{ assetWdr="USDC"; $("wdUSDC").classList.add("active"); $("wdETH").classList.remove("active"); };
 
   $("rate").value = String(rate);
-  $("rate").oninput = ()=>{ rate = Number($("rate").value || "0"); localStorage.setItem("rate", String(rate)); updateDepEq(); updateUsdBlock(); };
+  $("rate").oninput = ()=>{ rate = Number($("rate").value || "0"); localStorage.setItem("rate", String(rate)); updateDepEq(); };
   $("depAmount").oninput = updateDepEq();
 
   function updateDepEq(){
@@ -366,11 +372,29 @@
     await refresh(true);
   }
 
-  $("btnDeposit").onclick = async ()=>{
+  // Push UI rate -> on-chain (owner only)
+  document.getElementById("pushRateBtn").onclick = async () => {
+    if (!signer) return notify("Connecte ton wallet", "err");
+    try {
+      const v = Number(document.getElementById("rate").value || "0");
+      if (!v || v <= 0) return notify("Taux invalide", "err");
+      const price8 = ethers.utils.parseUnits(String(v), 8);
+      const tx = await vaultRW.setEthUsd(price8);
+      await tx.wait();
+      notify(`✅ Prix on-chain mis à ${v} $/ETH`);
+      await refresh(true);
+    } catch(e) {
+      console.error(e);
+      notify("❌ Échec mise à jour prix (es-tu owner ?)", "err");
+    }
+  };
+
+  // Actions
+  document.getElementById("btnDeposit").onclick = async ()=>{
     if(!signer) return notify("Connecte ton wallet", "err");
-    const amtStr = ($("depAmount").value || "0").trim();
+    const amtStr = (document.getElementById("depAmount").value || "0").trim();
     if(!amtStr || Number(amtStr)<=0) return;
-    setLoading($("btnDeposit"), true);
+    setLoading(document.getElementById("btnDeposit"), true);
     try{
       if(assetDep==="ETH"){
         const tx = await vaultRW.depositETH({ value: ethers.utils.parseEther(amtStr) });
@@ -387,18 +411,18 @@
         await tx.wait();
         notify(`✅ Dépôt ${amtStr} USDC confirmé`);
       }
-      $("depAmount").value = "";
+      document.getElementById("depAmount").value = "";
       updateDepEq();
       await refresh(true);
     }catch(e){ console.error(e); notify("❌ Échec du dépôt", "err"); }
-    finally{ setLoading($("btnDeposit"), false); }
+    finally{ setLoading(document.getElementById("btnDeposit"), false); }
   };
 
-  $("btnWithdraw").onclick = async ()=>{
+  document.getElementById("btnWithdraw").onclick = async ()=>{
     if(!signer) return notify("Connecte ton wallet", "err");
-    const amtStr = ($("wdAmount").value || "0").trim();
+    const amtStr = (document.getElementById("wdAmount").value || "0").trim();
     if(!amtStr || Number(amtStr)<=0) return;
-    setLoading($("btnWithdraw"), true);
+    setLoading(document.getElementById("btnWithdraw"), true);
     try{
       if(assetWdr==="ETH"){
         const tx = await vaultRW.withdrawETH(ethers.utils.parseEther(amtStr));
@@ -409,10 +433,10 @@
         await tx.wait();
         notify(`✅ Retrait ${amtStr} USDC confirmé`);
       }
-      $("wdAmount").value = "";
+      document.getElementById("wdAmount").value = "";
       await refresh(true);
     }catch(e){ console.error(e); notify("❌ Échec du retrait", "err"); }
-    finally{ setLoading($("btnWithdraw"), false); }
+    finally{ setLoading(document.getElementById("btnWithdraw"), false); }
   };
 
   // Graph data
@@ -442,23 +466,20 @@
     ctx.strokeStyle = "#8b5cf6"; ctx.lineWidth = 2; ctx.setLineDash([4,3]); ctx.stroke(); ctx.setLineDash([]);
   }
 
-  function updateUsdBlock(){
-    const totalEthNum = Number(($("totalEth").textContent||"0").split(" ")[0]) || 0;
-    const totalUsdcNum = Number(($("totalUsdc").textContent||"0").split(" ")[0]) || 0;
-    // recalculera côté user dans refresh()
-  }
-
   async function refresh(pushPoint=false){
     try{
       await updateNetPill();
+
+      // Totaux pool
       const [tEth, tUsdc] = await Promise.all([ vaultRO.totalETH(), vaultRO.totalUSDC() ]);
-      $("totalEth").textContent  = fmtEth(tEth) + " ETH";
-      $("totalUsdc").textContent = fmt(tUsdc, usdcDec) + " USDC";
+      document.getElementById("totalEth").textContent  = fmtEth(tEth) + " ETH";
+      document.getElementById("totalUsdc").textContent = fmt(tUsdc, usdcDec) + " USDC";
 
       if(account){
+        // Soldes user
         const [uEth, uUsdc] = await Promise.all([ vaultRO.userETH(account), vaultRO.userUSDC(account) ]);
-        $("myEth").textContent = fmtEth(uEth) + " ETH";
-        $("myUsdc").textContent = fmt(uUsdc, usdcDec) + " USDC";
+        document.getElementById("myEth").textContent = fmtEth(uEth) + " ETH";
+        document.getElementById("myUsdc").textContent = fmt(uUsdc, usdcDec) + " USDC";
 
         const ethNum  = Number(ethers.utils.formatEther(uEth || "0"));
         const usdcNum = Number(ethers.utils.formatUnits(uUsdc || "0", usdcDec));
@@ -466,13 +487,29 @@
         const totalUsdcNum = Number(ethers.utils.formatUnits(tUsdc || "0", usdcDec));
 
         const myUsd = ethNum * (rate||0) + usdcNum;
-        $("myUsd").textContent = isFinite(myUsd) ? myUsd.toLocaleString(undefined,{maximumFractionDigits:2}) : "—";
+        document.getElementById("myUsd").textContent = isFinite(myUsd) ? myUsd.toLocaleString(undefined,{maximumFractionDigits:2}) : "—";
 
         const poolUsd = (totalEthNum*(rate||0) + totalUsdcNum) || 0;
         const share = poolUsd>0 ? (myUsd/poolUsd*100) : 0;
-        $("myShare").textContent = isFinite(share) ? share.toFixed(2) + "%" : "—";
+        document.getElementById("myShare").textContent = isFinite(share) ? share.toFixed(2) + "%" : "—";
+
+        // Points (live)
+        const [ptsScaled, price8] = await Promise.all([
+          vaultRO.pendingPointsScaled(account),
+          vaultRO.ethUsd()
+        ]);
+        const pts = Number(ethers.utils.formatUnits(ptsScaled || "0", 6)); // lisible
+        document.getElementById("myPts").textContent = isFinite(pts) ? pts.toLocaleString(undefined,{maximumFractionDigits:2}) : "—";
+
+        // Option: si tu veux que l'UI suive le prix on-chain automatiquement, décommente :
+        // const rateFromChain = Number(ethers.utils.formatUnits(price8 || "0", 8));
+        // if (!isNaN(rateFromChain) && rateFromChain > 0) {
+        //   rate = rateFromChain;
+        //   document.getElementById("rate").value = String(rateFromChain);
+        // }
       }
 
+      // Graph
       if(pushPoint){
         const ethn = Number(ethers.utils.formatEther(await vaultRO.totalETH()));
         const usdcn= Number(ethers.utils.formatUnits(await vaultRO.totalUSDC(), usdcDec));
