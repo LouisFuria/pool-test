@@ -26,7 +26,8 @@
     code{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
     .warn{ background:#f59e0b22; border:1px solid #f59e0b55; color:#fde68a; padding:10px 12px; border-radius:12px; }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.min.js"></script>
+  <!-- ethers v5 UMD (compatible <script>) -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -115,7 +116,6 @@
   const POOL_ADDRESS = "0xfC39B74a0c3AD291f88224ec620410c32f3659e4";
   const USDC_ADDRESS = "0x3F532813FEB32E1990d9c7Ca8Cb29b62C573512B";
 
-  // ABIs minimalistes (matchent les contrats que tu as déployés)
   const VAULT_ABI = [
     { "type":"function","name":"depositETH","stateMutability":"payable","inputs":[],"outputs":[] },
     { "type":"function","name":"depositUSDC","stateMutability":"nonpayable","inputs":[{"name":"amount","type":"uint256"}],"outputs":[] },
@@ -134,48 +134,31 @@
     { "type":"function","name":"transferFrom","stateMutability":"nonpayable","inputs":[{"name":"from","type":"address"},{"name":"to","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"type":"bool"}] }
   ];
 
-  // Affiche les adresses
   document.getElementById("poolAddr").textContent = POOL_ADDRESS;
   document.getElementById("usdcAddr").textContent = USDC_ADDRESS;
 
-  // Ethers provider
-  if (!window.ethereum) {
-    alert("Installe MetaMask pour utiliser la dApp.");
-    return;
-  }
-  const provider = new ethers.BrowserProvider(window.ethereum);
-  let signer = null;
-  let account = null;
+  if (!window.ethereum) { alert("Installe MetaMask pour utiliser la dApp."); return; }
 
-  // Contracts (lecture sans signer ok)
+  const provider = new ethers.providers.Web3Provider(window.ethereum);
+  let signer = null, account = null;
+
   const vaultRO = new ethers.Contract(POOL_ADDRESS, VAULT_ABI, provider);
-  const usdcRO = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, provider);
+  const usdcRO  = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, provider);
 
-  // Helpers UI
   const $ = (id) => document.getElementById(id);
-  const fmtEth = (wei) => ethers.formatEther(wei ?? 0n);
-  const fmt = (x, dec=6) => {
-    // format units with decimals
-    try { return ethers.formatUnits(x ?? 0n, dec); } catch { return "0"; }
-  };
-  const parse = (s, dec=6) => ethers.parseUnits((s||"0").trim() || "0", dec);
+  const fmtEth = (wei) => ethers.utils.formatEther(wei || "0");
+  const fmt = (x, dec=6) => ethers.utils.formatUnits(x || "0", dec);
+  const parse = (s, dec=6) => ethers.utils.parseUnits((s || "0").trim(), dec);
 
   async function refresh() {
     try {
-      const chain = await provider.getNetwork();
-      const onBaseSepolia = (Number(chain.chainId) === 84532);
-      $("networkNote").style.display = onBaseSepolia ? "none" : "block";
+      const net = await provider.getNetwork();
+      $("networkNote").style.display = (Number(net.chainId) === 84532) ? "none" : "block";
 
-      const [tEth, tUsdc] = await Promise.all([
-        vaultRO.totalETH(),
-        vaultRO.totalUSDC()
-      ]);
-
+      const [tEth, tUsdc] = await Promise.all([ vaultRO.totalETH(), vaultRO.totalUSDC() ]);
       $("totalEth").textContent = fmtEth(tEth) + " ETH";
 
-      // lire decimals USDC pour format
-      let usdcDec = 6;
-      try { usdcDec = await usdcRO.decimals(); } catch {}
+      let usdcDec = 6; try { usdcDec = await usdcRO.decimals(); } catch {}
       $("totalUsdc").textContent = fmt(tUsdc, usdcDec) + " USDC";
 
       if (account) {
@@ -184,34 +167,119 @@
           vaultRO.userUSDC(account),
           usdcRO.balanceOf(account),
         ]);
-        $("myEth").textContent = fmtEth(uEth) + " ETH";
+        $("myEth").textContent  = fmtEth(uEth) + " ETH";
         $("myUsdc").textContent = fmt(uUsdc, usdcDec) + " USDC";
         $("usdcWallet").textContent = "Solde wallet USDC: " + fmt(wUsdc, usdcDec);
       }
-    } catch (e) {
-      console.error(e);
-    }
+    } catch(e){ console.error(e); }
   }
 
-  // Connect
   $("connectBtn").onclick = async () => {
-    await window.ethereum.request({ method: "eth_requestAccounts" });
-    signer = await provider.getSigner();
-    account = await signer.getAddress();
-    $("account").textContent = account.slice(0,6) + "…" + account.slice(-4);
-    $("who").textContent = $("account").textContent;
+    try {
+      await window.ethereum.request({ method: "eth_requestAccounts" });
+      signer = provider.getSigner();
+      account = await signer.getAddress();
+      $("account").textContent = account.slice(0,6) + "…" + account.slice(-4);
+      $("who").textContent = $("account").textContent;
 
-    // réinstancie en RW
-    window.vault = new ethers.Contract(POOL_ADDRESS, VAULT_ABI, signer);
-    window.usdc = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, signer);
+      window.vault = new ethers.Contract(POOL_ADDRESS, VAULT_ABI, signer);
+      window.usdc  = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, signer);
 
-    // propose switch si mauvais réseau
-    const net = await provider.getNetwork();
-    if (Number(net.chainId) !== 84532) {
-      try {
-        await window.ethereum.request({
-          method: "wallet_switchEthereumChain",
-          params: [{ chainId: "0x14A74" }] // 84532 en hex
-        });
-      } catch (err) {
-        // si résea
+      const net = await provider.getNetwork();
+      if (Number(net.chainId) !== 84532) {
+        try {
+          await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x14A74" }] });
+        } catch (err) {
+          if (err.code === 4902) {
+            await window.ethereum.request({
+              method: "wallet_addEthereumChain",
+              params: [{
+                chainId: "0x14A74",
+                chainName: "Base Sepolia",
+                rpcUrls: ["https://sepolia.base.org"],
+                nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+                blockExplorerUrls: ["https://sepolia.basescan.org"]
+              }]
+            });
+          }
+        }
+      }
+      await refresh();
+    } catch (e) { console.error(e); alert("Connexion refusée ou bloquée par le navigateur."); }
+  };
+
+  $("btnDepositEth").onclick = async () => {
+    if (!signer) return alert("Connecte ton wallet");
+    const amt = ($("ethIn").value || "0").trim();
+    if (!amt) return;
+    try {
+      $("txStatus").textContent = "Transaction en cours (depositETH)…";
+      const tx = await window.vault.depositETH({ value: ethers.utils.parseEther(amt) });
+      await tx.wait();
+      $("txStatus").textContent = "✅ Dépôt ETH confirmé";
+      $("ethIn").value = "";
+      await refresh();
+    } catch (e) { $("txStatus").textContent = "❌ Échec dépôt ETH"; console.error(e); }
+  };
+
+  $("btnDepositUsdc").onclick = async () => {
+    if (!signer) return alert("Connecte ton wallet");
+    const amtStr = ($("usdcIn").value || "0").trim();
+    if (!amtStr) return;
+    try {
+      let dec = 6; try { dec = await window.usdc.decimals(); } catch {}
+      const amount = parse(amtStr, dec);
+      const allowance = await window.usdc.allowance(account, POOL_ADDRESS);
+      if (allowance.lt(amount)) {
+        $("txStatus").textContent = "Approval USDC…";
+        const txA = await window.usdc.approve(POOL_ADDRESS, amount);
+        await txA.wait();
+      }
+      $("txStatus").textContent = "Transaction en cours (depositUSDC)…";
+      const tx = await window.vault.depositUSDC(amount);
+      await tx.wait();
+      $("txStatus").textContent = "✅ Dépôt USDC confirmé";
+      $("usdcIn").value = "";
+      await refresh();
+    } catch (e) { $("txStatus").textContent = "❌ Échec dépôt USDC"; console.error(e); }
+  };
+
+  $("btnWithdrawEth").onclick = async () => {
+    if (!signer) return alert("Connecte ton wallet");
+    const amt = ($("ethOut").value || "0").trim();
+    if (!amt) return;
+    try {
+      $("txStatus").textContent = "Transaction en cours (withdrawETH)…";
+      const tx = await window.vault.withdrawETH(ethers.utils.parseEther(amt));
+      await tx.wait();
+      $("txStatus").textContent = "✅ Retrait ETH confirmé";
+      $("ethOut").value = "";
+      await refresh();
+    } catch (e) { $("txStatus").textContent = "❌ Échec retrait ETH"; console.error(e); }
+  };
+
+  $("btnWithdrawUsdc").onclick = async () => {
+    if (!signer) return alert("Connecte ton wallet");
+    const amtStr = ($("usdcOut").value || "0").trim();
+    if (!amtStr) return;
+    try {
+      let dec = 6; try { dec = await window.usdc.decimals(); } catch {}
+      $("txStatus").textContent = "Transaction en cours (withdrawUSDC)…";
+      const tx = await window.vault.withdrawUSDC(parse(amtStr, dec));
+      await tx.wait();
+      $("txStatus").textContent = "✅ Retrait USDC confirmé";
+      $("usdcOut").value = "";
+      await refresh();
+    } catch (e) { $("txStatus").textContent = "❌ Échec retrait USDC"; console.error(e); }
+  };
+
+  // reload si compte / réseau change
+  if (window.ethereum) {
+    window.ethereum.on?.("accountsChanged", () => location.reload());
+    window.ethereum.on?.("chainChanged", () => location.reload());
+  }
+  await refresh();
+})();
+</script>
+</body>
+</html>
