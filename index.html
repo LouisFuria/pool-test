@@ -2,641 +2,490 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>FURIA DEX · Base Sepolia</title>
-<link rel="preconnect" href="https://cdn.jsdelivr.net" />
-<link rel="preconnect" href="https://unpkg.com" />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <style>
   :root{
-    --bg:#0b0f17;--card:#111827;--muted:#a3b0c2;--txt:#e6eefc;
-    --primary:#7c5cff;--primary-2:#6b4cff;--ok:#16a34a;--warn:#f59e0b;--err:#ef4444;
-    --chip:#1f2937;--chip2:#0f172a;--border:#1f2a3a
+    --bg:#0c0f16;--panel:#121725;--muted:#7f8aa3;--text:#e7ecf7;--primary:#7a57ff;--primary-2:#a594ff;--ok:#22c55e;--err:#ef4444;
+    --card:#101522;--chip:#0f1422;--soft:#141a2a;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--txt);font:500 16px/1.4 Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial}
-  .wrap{max-width:1200px;margin:28px auto;padding:0 16px}
-  .row{display:flex;gap:16px;flex-wrap:wrap}
-  .between{display:flex;justify-content:space-between;align-items:center;gap:12px}
-  .nav{display:flex;gap:10px;flex-wrap:wrap}
-  .tab{padding:10px 16px;border-radius:10px;background:var(--chip);cursor:pointer;user-select:none}
-  .tab.active{outline:2px solid var(--primary);background:linear-gradient(180deg,var(--chip),#172033)}
-  .badge{padding:6px 10px;border-radius:999px;background:var(--chip2);color:var(--muted);font-size:12px}
-  .btn{padding:12px 18px;border-radius:14px;background:var(--primary);border:0;color:#fff;font-weight:700;cursor:pointer}
-  .btn:disabled{opacity:.5;cursor:not-allowed}
-  .ghost{background:#1b2333;color:#dbe7ff}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px}
-  h1{margin:0 0 10px 0;font-weight:800;font-size:28px;letter-spacing:.2px}
-  h2{margin:0 0 12px 0;font-weight:800;font-size:18px}
-  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-  @media (max-width:920px){.grid{grid-template-columns:1fr}}
-  .input,select{width:100%;padding:14px;border-radius:12px;border:1px solid var(--border);background:#0e1421;color:var(--txt);font-size:16px}
-  .kk{display:flex;gap:8px;flex-wrap:wrap}
-  .chip{padding:10px 14px;border-radius:999px;background:#0f172a;cursor:pointer}
-  .chip.active{outline:2px solid var(--primary);background:#1b2337}
-  .label{color:var(--muted);font-size:13px;margin-bottom:6px}
-  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
-  .right{display:flex;justify-content:flex-end}
-  .stat{display:flex;flex-direction:column;gap:4px;padding:18px;border-radius:16px;background:var(--card);border:1px solid var(--border)}
-  .stat b{font-size:28px}
-  .toast{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:9999}
-  .toast .t{background:#132034;color:#cfe1ff;border:1px solid #213148;border-radius:12px;padding:12px 14px;max-width:520px}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,segoe ui,Roboto,"Helvetica Neue",Arial}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1180px;margin:24px auto;padding:0 16px}
+  .top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .brand{font-weight:800;font-size:28px;letter-spacing:.5px}
+  .crumb{color:var(--muted);font-size:14px}
+  .tabs{display:flex;gap:10px;margin:16px 0}
+  .tab{padding:10px 16px;border-radius:12px;background:var(--soft);cursor:pointer;color:var(--muted);border:1px solid #1b2235}
+  .tab.active{color:#fff;background:var(--panel);box-shadow:0 0 0 1px #1f2840 inset}
+  .right{margin-left:auto;display:flex;gap:10px;align-items:center}
+  .chip{background:#0f1628;padding:8px 12px;border-radius:999px;color:#cbd5e1;border:1px solid #1b2235;font-size:13px}
+  .btn{background:var(--primary);color:white;padding:10px 16px;border-radius:12px;border:none;cursor:pointer;font-weight:700}
+  .btn.secondary{background:#1b2235;color:#e2e8f0}
+  .btn:disabled{opacity:.6;cursor:not-allowed}
+  .grid{display:grid;gap:16px}
+  @media (min-width:980px){.grid-2{grid-template-columns:1.15fr .85fr}}
+  .card{background:var(--panel);border:1px solid #1b2235;border-radius:16px;padding:18px}
+  .h{font-size:14px;letter-spacing:.12em;color:#9fb0d6;text-transform:uppercase;margin-bottom:12px}
+  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .input, select{width:100%;padding:14px 14px;border-radius:12px;background:#0f1422;color:#e5edff;border:1px solid #1b2235;font-size:16px;outline:none}
+  select {appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 20 20" fill="%23a6b2d6"><path d="M5.5 7.5l4.5 5 4.5-5"/></svg>');background-repeat:no-repeat;background-position:right 10px center;padding-right:36px}
+  .pill{padding:8px 12px;border-radius:999px;background:#0f1422;border:1px solid #1b2235;color:#c9d5f2;cursor:pointer}
+  .pill.active{background:#1b2235}
+  .stat{background:#0e1320;border:1px solid #1b2235;border-radius:16px;padding:16px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
   .muted{color:var(--muted)}
+  .big{font-size:28px}
+  .swap-ctrls{display:grid;grid-template-columns:1fr 58px 1fr;gap:10px}
+  .swap-arrows{display:flex;align-items:center;justify-content:center}
+  .swap-arrows .pill{margin-left:-4px} /* décalage à gauche comme demandé */
   .table{width:100%;border-collapse:collapse}
-  .table th,.table td{border-bottom:1px solid var(--border);padding:12px 8px;text-align:left}
-  .pill{padding:6px 10px;border-radius:10px;background:#0e1729;font-size:13px}
-  .modalMask{position:fixed;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:50}
-  .modal{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;min-width:320px;max-width:420px}
+  .table th,.table td{padding:14px;border-bottom:1px solid #1b2235;text-align:left}
+  .badge{font-weight:800;color:#fff;background:var(--primary);padding:2px 8px;border-radius:8px}
+  .note{color:#a7b3d5;font-size:13px;margin-top:8px}
+  .toast{position:fixed;right:16px;bottom:16px;background:#0f1422;border:1px solid #1b2235;color:#e8eeff;padding:12px 14px;border-radius:12px;box-shadow:0 4px 28px rgba(0,0,0,.35)}
+  dialog{border:none;border-radius:16px;padding:0;max-width:560px;width:92%;background:var(--panel);color:var(--text)}
+  dialog .body{padding:18px}
+  dialog::backdrop{background:rgba(0,0,0,.6)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .green{color:var(--ok)} .red{color:var(--err)}
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="between">
-      <div>
-        <h1>FURIA DEX <span class="badge">Base Sepolia</span></h1>
-        <div class="muted">Swap (10 pts/$) · Pools (1 pt/$/min) · Vaults (1 pt/$/min) · Leaderboard</div>
-      </div>
-      <div class="between" style="gap:10px">
-        <div id="netTag" class="badge">Réseau: —</div>
-        <button id="btnConnect" class="btn">Connect Wallet</button>
-      </div>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">FURIA DEX</div>
+    <div class="crumb">· Base Sepolia</div>
+    <div class="right">
+      <div id="netChip" class="chip">Réseau: Base Sepolia</div>
+      <button id="btnConnect" class="btn">Connect</button>
     </div>
-
-    <div class="nav" style="margin:14px 0 18px">
-      <div class="tab active" data-tab="swap">Swap</div>
-      <div class="tab" data-tab="pools">Pools</div>
-      <div class="tab" data-tab="vaults">Vaults</div>
-      <div class="tab" data-tab="leaderboard">Leaderboard</div>
-    </div>
-
-    <!-- SWAP -->
-    <section id="tab-swap">
-      <div class="grid">
-        <div class="card">
-          <h2>SWAP ETH ↔ USDC · <span class="muted">Règle points : 10 pts / $ swapé</span></h2>
-          <div class="row">
-            <div style="flex:1">
-              <div class="label">From</div>
-              <select id="swapFrom" class="input">
-                <option value="ETH">ETH</option>
-                <option value="USDC">USDC</option>
-              </select>
-            </div>
-            <div class="between" style="align-items:flex-end">
-              <button id="btnFlip" class="chip">⇄</button>
-            </div>
-            <div style="flex:1">
-              <div class="label">To</div>
-              <select id="swapTo" class="input">
-                <option value="USDC">USDC</option>
-                <option value="ETH">ETH</option>
-              </select>
-            </div>
-          </div>
-
-          <div style="margin-top:12px">
-            <div class="label">Montant</div>
-            <input id="swapAmount" class="input" placeholder="0.0" />
-            <div class="kk" style="margin-top:10px">
-              <span class="chip" data-pct="25">25%</span>
-              <span class="chip" data-pct="50">50%</span>
-              <span class="chip" data-pct="75">75%</span>
-              <span class="chip" data-pct="100">100%</span>
-            </div>
-          </div>
-
-          <div style="margin-top:14px">
-            <div class="label">You Receive</div>
-            <div id="youReceive" class="input" style="height:auto;padding:14px 16px">—</div>
-          </div>
-
-          <div class="between" style="margin-top:12px">
-            <div id="balances" class="muted">Solde: —</div>
-            <button id="btnSwap" class="btn">Swap</button>
-          </div>
-        </div>
-
-        <div class="card">
-          <h2>INFOS (SWAP)</h2>
-          <div class="stat">
-            <span class="muted">Prix ETH/USD</span>
-            <b id="statPrice">$—</b>
-          </div>
-          <div class="stat" style="margin-top:12px">
-            <span class="muted">Frais</span>
-            <b id="statFee">—</b>
-          </div>
-          <div class="stat" style="margin-top:12px">
-            <span class="muted">TVL (équiv. ETH)</span>
-            <b id="statTVL">—</b>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- POOLS -->
-    <section id="tab-pools" style="display:none">
-      <div class="row">
-        <div class="stat" style="flex:1">
-          <span class="muted">TVL (équiv. ETH)</span>
-          <b id="poolsTVL">—</b>
-        </div>
-        <div class="stat" style="flex:1">
-          <span class="muted">Volume ~24h</span>
-          <b id="poolsVol">$0</b>
-        </div>
-        <div class="stat" style="flex:1">
-          <span class="muted">Mes points (swap)</span>
-          <b id="mySwapPts">0</b>
-        </div>
-      </div>
-
-      <div class="card" style="margin-top:16px">
-        <h2>POOLS (POINTS: 1 pt / $ / min)</h2>
-        <table class="table">
-          <thead><tr>
-            <th>Pair</th><th>APY</th><th>TVL (ETH)</th><th>Points règle</th><th class="right">Action</th>
-          </tr></thead>
-          <tbody id="poolsBody">
-            <!-- Row ETH/USDC -->
-          </tbody>
-        </table>
-        <div class="muted" style="margin-top:10px">⚠️ Dépôt “Pools” utilise le **Vault**. Le bouton ADD ouvre un dépôt **50/50** (ETH/USDC) calculé au prix courant.</div>
-      </div>
-    </section>
-
-    <!-- VAULTS -->
-    <section id="tab-vaults" style="display:none">
-      <div class="row">
-        <div class="stat" style="flex:1">
-          <span class="muted">TVL Vault (équiv. ETH)</span>
-          <b id="vaultsTVL">—</b>
-        </div>
-        <div class="stat" style="flex:1">
-          <span class="muted">Mes points (vault)</span>
-          <b id="myVaultPts">0</b>
-        </div>
-      </div>
-
-      <div class="grid" style="margin-top:16px">
-        <div class="card">
-          <h2>VAULT ETH</h2>
-          <div class="muted">APY <b class="mono">25%</b> · Règle points: <b>1 pt / $ / min</b></div>
-          <div class="label" style="margin-top:12px">Montant en ETH</div>
-          <input id="vEthAmt" class="input" placeholder="ex. 0.2" />
-          <div class="right" style="margin-top:10px">
-            <button id="btnDepositETH" class="btn">Déposer</button>
-          </div>
-        </div>
-
-        <div class="card">
-          <h2>VAULT USDC</h2>
-          <div class="muted">APY <b class="mono">25%</b> · Règle points: <b>1 pt / $ / min</b></div>
-          <div class="label" style="margin-top:12px">Montant en USDC</div>
-          <input id="vUsdcAmt" class="input" placeholder="ex. 200" />
-          <div class="right" style="margin-top:10px">
-            <button id="btnDepositUSDC" class="btn">Déposer</button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- LEADERBOARD -->
-    <section id="tab-leaderboard" style="display:none">
-      <div class="card">
-        <h2>LEADERBOARD (VAULT POINTS)</h2>
-        <table class="table">
-          <thead><tr><th>#</th><th>Adresse</th><th>Points</th></tr></thead>
-          <tbody id="lbBody"><tr><td colspan="3" class="muted">Chargement…</td></tr></tbody>
-        </table>
-        <div class="muted" style="margin-top:10px">Règle: <b>1 pt / $ / min</b> (lecture on-chain via <code>pointsOf</code>, refresh 10s).</div>
-      </div>
-    </section>
-
-    <!-- MODAL POOL ADD -->
-    <div id="mask" class="modalMask">
-      <div class="modal">
-        <h2>Déposer dans la pool</h2>
-        <div class="label">Total (USD) à déposer (50% ETH / 50% USDC)</div>
-        <input id="poolUsd" class="input" placeholder="ex. 100" />
-        <div class="right" style="margin-top:12px;gap:8px">
-          <button id="mCancel" class="btn ghost">Annuler</button>
-          <button id="mConfirm" class="btn">Déposer</button>
-        </div>
-        <div class="muted" style="margin-top:10px">L’app enverra 50% en ETH (au prix actuel) + 50% en USDC (approve auto).</div>
-      </div>
-    </div>
-
-    <div class="toast" id="toasts"></div>
   </div>
 
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <div class="tabs">
+    <div class="tab active" data-tab="swap">Swap</div>
+    <div class="tab" data-tab="pools">Pools</div>
+    <div class="tab" data-tab="vaults">Vaults</div>
+    <div class="tab" data-tab="leaderboard">Leaderboard</div>
+  </div>
+
+  <!-- SWAP -->
+  <section id="swap" class="grid grid-2">
+    <div class="card">
+      <div class="h">Swap ETH ↔ USDC · Règle points: <b>10 pts / $ swappé</b></div>
+      <div class="swap-ctrls">
+        <select id="swapFrom">
+          <option value="ETH">ETH</option>
+          <option value="USDC">USDC</option>
+        </select>
+        <div class="swap-arrows"><button id="btnFlip" class="pill" title="Inverser">⇄</button></div>
+        <select id="swapTo">
+          <option value="USDC">USDC</option>
+          <option value="ETH">ETH</option>
+        </select>
+      </div>
+      <div style="margin-top:10px">
+        <input id="swapAmount" class="input" placeholder="Montant" inputmode="decimal" />
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="pill pct" data-p="25">25%</button>
+        <button class="pill pct" data-p="50">50%</button>
+        <button class="pill pct" data-p="75">75%</button>
+        <button class="pill pct" data-p="100">100%</button>
+      </div>
+      <div class="card" style="margin-top:12px;background:#0f1422">
+        <div class="muted">You Receive</div>
+        <div id="youReceive" class="big">—</div>
+      </div>
+      <div class="row" style="margin-top:12px;justify-content:space-between">
+        <div id="balances" class="muted">Solde: —</div>
+        <button id="btnSwap" class="btn">Swap</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="h">Infos (Swap)</div>
+      <div class="stat"><span>Prix ETH/USD</span><span id="priceBox" class="big">$—</span></div>
+      <div class="stat" style="margin-top:10px"><span>Frais</span><span id="feeBox" class="big">—</span></div>
+      <div class="stat" style="margin-top:10px"><span>TVL (équiv. ETH)</span><span id="tvlSwap" class="big">—</span></div>
+    </div>
+  </section>
+
+  <!-- POOLS -->
+  <section id="pools" style="display:none">
+    <div class="grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="stat"><span>TVL (équiv. ETH)</span><span id="tvlPools" class="big">—</span></div>
+      <div class="stat"><span>Volume ~24h</span><span id="volPools" class="big">$0</span></div>
+      <div class="stat"><span>Mes points (swap)</span><span id="mySwapPts" class="big">0</span></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div class="h">Pools (points: <b>1 pt / $ / min</b>)</div>
+      <table class="table">
+        <thead><tr>
+          <th>Pair</th><th>APY</th><th>TVL (ETH)</th><th>Vol(~24h)</th><th>Points règle</th><th></th>
+        </tr></thead>
+        <tbody id="poolRows">
+          <!-- ligne ETH/USDC -->
+        </tbody>
+      </table>
+      <div class="note">⚠️ Le dépôt “Pools” utilise le <b>même</b> contrat que le Vault. Ici, l’ADD réalise automatiquement un dépôt <b>50/50</b> (en $) dans le vault.</div>
+    </div>
+  </section>
+
+  <!-- VAULTS -->
+  <section id="vaults" style="display:none">
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <div class="h">Vault ETH</div>
+        <div class="big" id="vaultEthApy">25%</div>
+        <div class="note">Règle points: <b>1 pt / $ / min</b> · refresh 10s</div>
+        <div class="two" style="margin-top:10px">
+          <input id="vaultEthAmount" class="input" placeholder="Montant ETH (ex: 0.1)"/>
+          <button id="btnVaultDepositETH" class="btn">Déposer</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="h">Vault USDC</div>
+        <div class="big" id="vaultUsdcApy">25%</div>
+        <div class="note">Règle points: <b>1 pt / $ / min</b> · refresh 10s</div>
+        <div class="two" style="margin-top:10px">
+          <input id="vaultUsdcAmount" class="input" placeholder="Montant USDC (ex: 200)"/>
+          <button id="btnVaultDepositUSDC" class="btn">Déposer</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LEADERBOARD -->
+  <section id="leaderboard" style="display:none">
+    <div class="card">
+      <div class="h">Leaderboard (vault points)</div>
+      <table class="table">
+        <thead><tr><th>#</th><th>Adresse</th><th>Points</th></tr></thead>
+        <tbody id="lbRows"></tbody>
+      </table>
+      <div class="note">Règle: <b>1 pt / $ / min</b> (lecture on-chain via <code>pointsOf</code>, refresh 10s).</div>
+    </div>
+  </section>
+</div>
+
+<!-- MODAL POOL ADD (double-sided) -->
+<dialog id="dlgAdd">
+  <div class="body">
+    <div class="h">Déposer dans la pool</div>
+    <div class="note" style="margin-bottom:8px">Entrer un <b>montant total en $</b>. Le dépôt sera réalisé 50% en ETH et 50% en USDC au prix courant.</div>
+    <div class="two">
+      <input id="addUsd" class="input" placeholder="Montant en $ (ex: 100)"/>
+      <button id="btnAddConfirm" class="btn">Déposer</button>
+    </div>
+    <div class="row" style="margin-top:10px;justify-content:flex-end">
+      <button id="btnAddCancel" class="btn secondary">Annuler</button>
+    </div>
+  </div>
+</dialog>
+
+<div id="toast" class="toast" style="display:none"></div>
+
 <script>
-/*** ====== CONFIG ====== ***/
-const CHAIN_ID = 84532; // Base Sepolia
-const ADDR = {
-  USDC: "0x3F532813FEB32E1990d9c7Ca8Cb29b62C573512B",
-  VAULT: "0xfC39B74a0c3AD291f88224ec620410c32f3659e4",
-  SWAP:  "0x9965B8ef813E6247c6788AF7836756a579474484",
-};
-const RPCS = [
-  "https://sepolia.base.org",
-  "https://base-sepolia-rpc.publicnode.com",
-  "https://base-sepolia.infura.io/v3/00000000000000000000000000000000"
-];
+(async function(){
+  // ========= CONFIG
+  const CHAIN_ID_HEX = '0x14A54'; // 84532 = Base Sepolia
+  const SWAP_ADDRESS  = '0x9965B8ef813E6247c6788AF7836756a579474484';
+  const VAULT_ADDRESS = '0xfC39B74a0c3AD291f88224ec620410c32f3659e4';
+  const USDC_ADDRESS  = '0x3F532813FEB32E1990d9c7Ca8Cb29b62C573512B';
+  const APY_POOL = 20;   // affichage
+  const APY_VAULT = 25;  // affichage
 
-/*** ====== ABIs minimales ====== ***/
-const ERC20_ABI = [
-  "function decimals() view returns(uint8)",
-  "function balanceOf(address) view returns(uint256)",
-  "function allowance(address,address) view returns(uint256)",
-  "function approve(address spender,uint256) returns(bool)"
-];
+  // ========= ABIs minimales
+  const ERC20_ABI = [
+    "function decimals() view returns (uint8)",
+    "function balanceOf(address) view returns (uint256)",
+    "function allowance(address owner,address spender) view returns (uint256)",
+    "function approve(address spender, uint256 amount) returns (bool)"
+  ];
 
-const VAULT_ABI = [
-  "function totalETH() view returns(uint256)",
-  "function totalUSDC() view returns(uint256)",
-  "function depositETH() payable",
-  "function depositUSDC(uint256 amount)",
-  "function pointsOf(address u) view returns(uint256)",
-  "event DepositETH(address indexed user,uint256 amount)",
-  "event DepositUSDC(address indexed user,uint256 amount)"
-];
+  // Swap (prix 8 décimales, fee en bps, TVL lecture optionnelle)
+  const SWAP_ABI = [
+    "function ethUsd() view returns (uint256)",   // 8 déc
+    "function feeBps() view returns (uint256)",   // e.g. 30
+    "function USDC() view returns (address)"
+  ];
 
-const SWAP_ABI = [
-  "function USDC() view returns(address)",
-  "function ethUsd() view returns(uint256)",     // 8 décimales
-  "function feeBps() view returns(uint256)",     // e.g. 30 = 0.30%
-  "function swapETHforUSDC() payable",           // emit event
-  "function swapUSDCforETH(uint256 usdcIn)",     // needs approve
-  "event SwapETHforUSDC(address indexed user,uint256 ethIn,uint256 usdcOut,uint256 price8,uint256 feeBps)",
-  "event SwapUSDCforETH(address indexed user,uint256 usdcIn,uint256 ethOut,uint256 price8,uint256 feeBps)"
-];
+  // Vault + points (événements & vues)
+  const VAULT_ABI = [
+    "function totalETH() view returns (uint256)",
+    "function totalUSDC() view returns (uint256)",
+    "function depositETH() payable",
+    "function depositUSDC(uint256 amount)",
+    "function pointsOf(address u) view returns (uint256)",   // points * 1e6 (scaled)
+    "event DepositETH(address indexed user, uint256 amount)",
+    "event DepositUSDC(address indexed user, uint256 amount)",
+    "event WithdrawETH(address indexed user, uint256 amount)",
+    "event WithdrawUSDC(address indexed user, uint256 amount)"
+  ];
 
-/*** ====== Helpers ====== ***/
-const $ = (q)=>document.querySelector(q);
-const toasts = $("#toasts");
-function toast(msg){const d=document.createElement("div");d.className="t";d.textContent=msg;toasts.appendChild(d);setTimeout(()=>d.remove(),4200);}
+  // ========= Ethers & state
+  let provider, signer, me, price8=0, feeBps=0, usdcDecimals=6;
+  let swap, vault, usdc;
 
-function short(a){return a? a.slice(0,6)+"…"+a.slice(-4):"—"}
-function fmt(n,dec=4){if(n===null||n===undefined||Number.isNaN(+n))return "—";return (+n).toLocaleString(undefined,{maximumFractionDigits:dec})}
+  // ========= UI helpers
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  function toast(t){ const el=$("#toast"); el.textContent=t; el.style.display='block'; setTimeout(()=>el.style.display='none',2500); }
+  function fmtUsd(n){ return '$'+ Number(n).toLocaleString(undefined,{maximumFractionDigits:2}); }
+  function fmt(n){ return Number(n).toLocaleString(undefined,{maximumFractionDigits:6}); }
 
-/*** ====== State & provider ====== ***/
-let provider = new ethers.providers.JsonRpcProvider(RPCS[0],{chainId:CHAIN_ID,name:"base-sepolia"});
-let web3, signer, me;
-let USDC = new ethers.Contract(ADDR.USDC, ERC20_ABI, provider);
-let VAULT = new ethers.Contract(ADDR.VAULT, VAULT_ABI, provider);
-let SWAP  = new ethers.Contract(ADDR.SWAP , SWAP_ABI , provider);
-let usdcDecimals = 6;
-
-async function ensureDecimals(){
-  try{ usdcDecimals = await USDC.decimals(); }catch{}
-}
-
-/*** ====== Connexion wallet ====== ***/
-async function connect(silent=false){
-  if(!window.ethereum){ toast("MetaMask introuvable"); return; }
-  try{
-    const accs = await window.ethereum.request({method:"eth_requestAccounts"});
-    if(!accs?.length) return;
-    web3 = new ethers.providers.Web3Provider(window.ethereum,"any");
-    signer = web3.getSigner();
-    me = await signer.getAddress();
-
-    // Network tag
-    const net = await web3.getNetwork();
-    $("#netTag").textContent = `Réseau: ${net.chainId||net.name}`;
-    if(net.chainId !== CHAIN_ID) toast("Change de réseau → Base Sepolia (84532)");
-
-    $("#btnConnect").textContent = short(me);
-    localStorage.setItem("furia_autoconnect","1");
-
-    // listeners
-    window.ethereum.removeAllListeners?.("accountsChanged");
-    window.ethereum.removeAllListeners?.("chainChanged");
-    window.ethereum.on("accountsChanged", async (a)=>{
-      if(!a?.length){ $("#btnConnect").textContent="Connect Wallet"; me=undefined; return; }
-      me = a[0]; $("#btnConnect").textContent = short(me); await refreshBalances();
-    });
-    window.ethereum.on("chainChanged", async ()=>{
-      web3 = new ethers.providers.Web3Provider(window.ethereum,"any");
-      signer = web3.getSigner();
-      await refreshAll();
-    });
-
-    await refreshAll();
-  }catch(e){ console.error(e); if(!silent) toast("Connexion impossible."); }
-}
-
-/*** ====== UI wiring ====== ***/
-function wireTabs(){
-  document.querySelectorAll(".tab").forEach(t=>{
-    t.onclick=()=>{
-      document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
-      t.classList.add("active");
-      const id = t.dataset.tab;
-      ["swap","pools","vaults","leaderboard"].forEach(k=>{
-        $("#tab-"+k).style.display = (k===id)?"block":"none";
-      })
+  // ========= Wallet connect / persist
+  async function ensureProvider(){
+    if(!window.ethereum){ toast('Installe MetaMask.'); throw new Error('no wallet'); }
+    provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
+    const net = await provider.getNetwork();
+    if (net.chainId !== 84532){
+      try{
+        await window.ethereum.request({
+          method:'wallet_switchEthereumChain', params:[{ chainId: CHAIN_ID_HEX }]
+        });
+      }catch(e){ toast('Change de réseau sur Base Sepolia.'); throw e; }
     }
-  })
-}
-function wireUI(){
-  $("#btnConnect").onclick = ()=>connect(false);
-  $("#btnFlip").onclick = ()=>{
-    const a=$("#swapFrom"), b=$("#swapTo");
-    const tmp=a.value; a.value=b.value; b.value=tmp; computeReceive();
-  };
-  document.querySelectorAll(".chip[data-pct]").forEach(ch=>{
-    ch.onclick=()=>{
-      ch.parentElement.querySelectorAll(".chip").forEach(x=>x.classList.remove("active"));
-      ch.classList.add("active");
-      fillPct(+ch.dataset.pct);
-    }
-  });
-  $("#swapAmount").oninput = computeReceive;
-  $("#swapFrom").onchange = computeReceive;
-  $("#swapTo").onchange   = computeReceive;
-  $("#btnSwap").onclick   = doSwap;
-
-  // Pools row
-  renderPoolsRow();
-  $("#poolsBody").addEventListener("click",(e)=>{
-    const btn = e.target.closest("button[data-add]");
-    if(btn){ openModal(); }
-  });
-
-  // Modal
-  $("#mCancel").onclick = closeModal;
-  $("#mConfirm").onclick = depositPool;
-
-  // Vaults
-  $("#btnDepositETH").onclick = depositETH;
-  $("#btnDepositUSDC").onclick = depositUSDC;
-}
-
-function openModal(){ $("#mask").style.display="flex"; }
-function closeModal(){ $("#mask").style.display="none"; $("#poolUsd").value=""; }
-
-/*** ====== Calculs affichage “You receive” ====== ***/
-let lastPrice=0, lastFeeBps=0;
-
-async function loadSwapStatics(){
-  try{
-    lastPrice = +(await SWAP.ethUsd())/1e8;   // $/ETH
-  }catch{ lastPrice = 0; }
-  try{
-    lastFeeBps = +(await SWAP.feeBps());       // e.g. 30
-  }catch{ lastFeeBps = 0; }
-
-  $("#statPrice").textContent = lastPrice? ("$"+fmt(lastPrice,2)) : "$—";
-  $("#statFee").textContent   = lastFeeBps? (fmt(lastFeeBps/100,2)+"%") : "—";
-}
-
-function computeReceive(){
-  const from=$("#swapFrom").value, to=$("#swapTo").value;
-  let amt = parseFloat($("#swapAmount").value||"0");
-  if(!amt || amt<=0 || !lastPrice){ $("#youReceive").textContent="—"; return; }
-  let out=0;
-  if(from==="ETH" && to==="USDC"){
-    const gross = amt*lastPrice;
-    out = gross*(1 - lastFeeBps/10000);
-    $("#youReceive").textContent = fmt(out,6)+" USDC";
-  }else if(from==="USDC" && to==="ETH"){
-    const gross = amt/lastPrice;
-    out = gross*(1 - lastFeeBps/10000);
-    $("#youReceive").textContent = fmt(out,6)+" ETH";
-  }else{
-    $("#youReceive").textContent="—";
+    const a = (await provider.listAccounts())[0];
+    if(a){ signer = provider.getSigner(); me = a; }
   }
-}
-
-function fillPct(p){
-  if(!me){ toast("Connecte ton wallet"); return; }
-  const from=$("#swapFrom").value;
-  const target = $("#swapAmount");
-  const [eth,usdc] = balancesCache;
-  if(from==="ETH"){
-    const v = Math.max(0,(eth||0))*p/100;
-    target.value = v>0? String(v) : "";
-  }else{
-    const v = Math.max(0,(usdc||0))*p/100;
-    target.value = v>0? String(v) : "";
+  async function connect(){
+    await ensureProvider();
+    const accs = await window.ethereum.request({ method:'eth_requestAccounts' });
+    me = accs[0]; signer = provider.getSigner();
+    localStorage.setItem('furia_connected','1');
+    $("#btnConnect").textContent = me.slice(0,6)+'…'+me.slice(-4);
+    await onReady();
   }
-  computeReceive();
-}
+  $("#btnConnect").onclick = connect;
 
-/*** ====== Balances & TVL ====== ***/
-let balancesCache=[0,0];
+  // auto-reconnect
+  if(localStorage.getItem('furia_connected')) {
+    ensureProvider().then(async()=>{ 
+      const accs = await provider.listAccounts();
+      if(accs[0]){ me = accs[0]; signer=provider.getSigner(); $("#btnConnect").textContent=me.slice(0,6)+'…'+me.slice(-4); onReady(); }
+    }).catch(()=>{});
+  }
 
-async function refreshBalances(){
-  try{
-    if(!me){ $("#balances").textContent="Solde: —"; return; }
-    const e = await provider.getBalance(me);
-    const u = await USDC.balanceOf(me);
-    const eth = +ethers.utils.formatEther(e);
-    const usdc = +ethers.utils.formatUnits(u,usdcDecimals);
-    balancesCache=[eth,usdc];
-    $("#balances").textContent = `Solde: ${fmt(eth,4)} ETH · ${fmt(usdc,2)} USDC`;
-  }catch{}
-}
+  // ========= Contracts init
+  async function initContracts(){
+    const base = signer ?? provider;
+    swap = new ethers.Contract(SWAP_ADDRESS, SWAP_ABI, base);
+    vault= new ethers.Contract(VAULT_ADDRESS,VAULT_ABI, base);
+    const usdcAddr = USDC_ADDRESS || await swap.USDC();
+    usdc = new ethers.Contract(usdcAddr, ERC20_ABI, base);
+    usdcDecimals = await usdc.decimals().catch(()=>6);
+    price8 = (await swap.ethUsd()).toString();
+    feeBps = (await swap.feeBps()).toString();
+    $("#priceBox").textContent = '$'+(Number(price8)/1e8).toLocaleString();
+    $("#feeBox").textContent   = (Number(feeBps)/100).toFixed(2)+'%';
+  }
 
-async function refreshTVL(){
-  try{
-    const tEth = +(ethers.utils.formatEther(await VAULT.totalETH()));
-    const tUsdc= +(ethers.utils.formatUnits(await VAULT.totalUSDC(), usdcDecimals));
-    const tvlEthEq = tEth + (lastPrice? (tUsdc/lastPrice) : 0);
-    $("#statTVL").textContent   = fmt(tvlEthEq,4)+" ETH";
-    $("#poolsTVL").textContent  = fmt(tvlEthEq,4)+" ETH";
-    $("#vaultsTVL").textContent = fmt(tvlEthEq,4)+" ETH";
-    // Line for Pools row
-    $("#rowTVL").textContent    = fmt(tvlEthEq,4)+" ETH";
-  }catch{}
-}
+  // ========= Math helpers
+  function usdToEth(usd){ return usd / (Number(price8)/1e8); }
+  function ethToUsd(eth){ return eth * (Number(price8)/1e8); }
+  function applyFee(x){ return x * (1 - Number(feeBps)/10000); }
 
-/*** ====== Swap on-chain ====== ***/
-async function doSwap(){
-  if(!signer){ toast("Connecte ton wallet"); return; }
-  const from=$("#swapFrom").value, to=$("#swapTo").value;
-  let amt = parseFloat($("#swapAmount").value||"0");
-  if(!amt || amt<=0){ toast("Montant invalide"); return; }
+  // ========= Balances & TVL
+  async function refreshBalances(){
+    if(!provider) return;
+    const p = signer ?? provider;
+    const addr = me || (await p.listAccounts())[0];
+    if(!addr){ $("#balances").textContent='Solde: —'; return; }
+    const ethBal = await provider.getBalance(addr);
+    const usdcBal= await usdc.balanceOf(addr);
+    $("#balances").textContent = `Solde: ${fmt(ethers.utils.formatEther(ethBal))} ETH · ${fmt(Number(usdcBal)/10**usdcDecimals)} USDC`;
+  }
+  async function refreshTvl(){
+    const tEth  = Number(ethers.utils.formatEther(await vault.totalETH()));
+    const tUsdc = Number((await vault.totalUSDC()).toString())/10**usdcDecimals;
+    const tvlEthEq = tEth + usdToEth(tUsdc);
+    $("#tvlSwap").textContent  = fmt(tvlEthEq)+' ETH';
+    $("#tvlPools").textContent = fmt(tvlEthEq)+' ETH';
+    // pool row fill
+    const row = `
+      <tr>
+        <td>ETH / USDC</td>
+        <td>${APY_POOL}%</td>
+        <td>${fmt(tvlEthEq)}</td>
+        <td>$0</td>
+        <td>1 pt / $ / min</td>
+        <td><button class="btn" id="btnOpenAdd">ADD</button></td>
+      </tr>`;
+    $("#poolRows").innerHTML = row;
+    const btn = $("#btnOpenAdd"); if(btn) btn.onclick = ()=>$("#dlgAdd").showModal();
+  }
 
-  try{
-    if(from==="ETH" && to==="USDC"){
-      const tx = await (new ethers.Contract(ADDR.SWAP,SWAP_ABI,signer))
-        .swapETHforUSDC({value:ethers.utils.parseEther(String(amt))});
-      toast("Swap ETH→USDC envoyé…");
-      await tx.wait();
-    }else if(from==="USDC" && to==="ETH"){
-      // Approve si besoin
-      const need = ethers.utils.parseUnits(String(amt), usdcDecimals);
-      const USDCw = new ethers.Contract(ADDR.USDC, ERC20_ABI, signer);
-      const allow = await USDCw.allowance(me, ADDR.SWAP);
-      if(allow.lt(need)){
-        const aTx = await USDCw.approve(ADDR.SWAP, need);
-        toast("Approve USDC…"); await aTx.wait();
-      }
-      const tx = await (new ethers.Contract(ADDR.SWAP,SWAP_ABI,signer)).swapUSDCforETH(need);
-      toast("Swap USDC→ETH envoyé…");
-      await tx.wait();
+  // ========= Quote “You Receive”
+  function updateQuote(){
+    const from = $("#swapFrom").value, to=$("#swapTo").value;
+    let amt = parseFloat($("#swapAmount").value);
+    if(!isFinite(amt) || amt<=0){ $("#youReceive").textContent='—'; return; }
+    let out=0;
+    const price = Number(price8)/1e8;
+    if(from==='ETH' && to==='USDC'){ out = applyFee(amt*price); $("#youReceive").textContent = fmt(out)+' USDC'; }
+    else if(from==='USDC' && to==='ETH'){ out = applyFee(amt/price); $("#youReceive").textContent = fmt(out)+' ETH'; }
+    else { $("#youReceive").textContent='—'; }
+  }
+  $("#swapAmount").oninput = updateQuote;
+  $("#swapFrom").onchange = ()=>{ if($("#swapFrom").value===$("#swapTo").value){ $("#swapTo").value = $("#swapFrom").value==='ETH'?'USDC':'ETH'; } updateQuote();};
+  $("#swapTo").onchange   = updateQuote;
+  $("#btnFlip").onclick   = ()=>{ const a=$("#swapFrom").value; $("#swapFrom").value=$("#swapTo").value; $("#swapTo").value=a; updateQuote(); };
+  $$(".pct").forEach(b=>b.onclick=async()=>{
+    if(!me){ toast('Connecte ton wallet'); return;}
+    // set % based on selected "from" token balance
+    const from = $("#swapFrom").value;
+    if(from==='ETH'){
+      const bal = await provider.getBalance(me);
+      const val = Number(ethers.utils.formatEther(bal)) * (Number(b.dataset.p)/100);
+      $("#swapAmount").value = (Math.max(0,val-0.0002)).toFixed(6);
     }else{
-      toast("Sélection invalide");
-      return;
+      const bal = await usdc.balanceOf(me);
+      const val = (Number(bal)/10**usdcDecimals) * (Number(b.dataset.p)/100);
+      $("#swapAmount").value = val.toFixed(2);
     }
-    await refreshAll();
-    computeReceive();
-    toast("Swap confirmé ✅");
-  }catch(e){ console.error(e); toast("Échec du swap"); }
-}
+    updateQuote();
+  });
 
-/*** ====== Pools (ADD 50/50) ====== ***/
-function renderPoolsRow(){
-  const tb = $("#poolsBody");
-  tb.innerHTML = `
-    <tr>
-      <td>ETH / USDC</td>
-      <td>20%</td>
-      <td id="rowTVL">—</td>
-      <td>1 pt / $ / min</td>
-      <td class="right"><button class="btn" data-add="1">ADD</button></td>
-    </tr>
-  `;
-}
+  // ========= Pools: dépôt double-sided 50/50 ($)
+  $("#btnAddCancel").onclick = ()=>$("#dlgAdd").close();
+  $("#btnAddConfirm").onclick = async ()=>{
+    try{
+      if(!me){ await connect(); }
+      const usd = parseFloat($("#addUsd").value);
+      if(!isFinite(usd) || usd<=0){ toast("Montant invalide"); return; }
+      const halfUsd = usd/2;
+      const ethAmt  = usdToEth(halfUsd); // en ETH
+      const usdcAmt = halfUsd;           // en USDC
+      // 1) deposit ETH
+      const vSigner = vault.connect(signer);
+      toast('Dépôt ETH en cours…');
+      const tx1 = await vSigner.depositETH({ value: ethers.utils.parseEther(String(ethAmt)) });
+      await tx1.wait();
+      // 2) approve + deposit USDC
+      const uSigner = usdc.connect(signer);
+      const need = ethers.utils.parseUnits(String(usdcAmt), usdcDecimals);
+      const allowance = await usdc.allowance(me, VAULT_ADDRESS);
+      if(allowance.lt(need)){
+        toast('Approve USDC…');
+        const txa = await uSigner.approve(VAULT_ADDRESS, need);
+        await txa.wait();
+      }
+      toast('Dépôt USDC…');
+      const tx2 = await vSigner.depositUSDC(need);
+      await tx2.wait();
+      toast('Dépôt 50/50 réussi ✅');
+      $("#dlgAdd").close();
+      refreshBalances(); refreshTvl();
+    }catch(e){ console.error(e); toast('Échec du dépôt'); }
+  };
 
-async function depositPool(){
-  if(!signer){ toast("Connecte ton wallet"); return; }
-  const usd = parseFloat($("#poolUsd").value||"0");
-  if(!usd || usd<=0 || !lastPrice){ toast("Montant invalide"); return; }
+  // ========= Vaults dépôts unitaires
+  $("#btnVaultDepositETH").onclick = async ()=>{
+    if(!me){ await connect(); }
+    const v = parseFloat($("#vaultEthAmount").value);
+    if(!isFinite(v)||v<=0){ toast('Montant invalide'); return; }
+    try{
+      const tx = await vault.connect(signer).depositETH({ value: ethers.utils.parseEther(String(v)) });
+      await tx.wait(); toast('Déposé ✅'); refreshBalances(); refreshTvl();
+    }catch(e){ console.error(e); toast('Échec du dépôt'); }
+  };
+  $("#btnVaultDepositUSDC").onclick = async ()=>{
+    if(!me){ await connect(); }
+    const v = parseFloat($("#vaultUsdcAmount").value);
+    if(!isFinite(v)||v<=0){ toast('Montant invalide'); return; }
+    try{
+      const amt = ethers.utils.parseUnits(String(v), usdcDecimals);
+      const allowance = await usdc.allowance(me, VAULT_ADDRESS);
+      if(allowance.lt(amt)){
+        const txa = await usdc.connect(signer).approve(VAULT_ADDRESS, amt);
+        await txa.wait();
+      }
+      const tx = await vault.connect(signer).depositUSDC(amt);
+      await tx.wait(); toast('Déposé ✅'); refreshBalances(); refreshTvl();
+    }catch(e){ console.error(e); toast('Échec du dépôt'); }
+  };
 
-  // 50% en USD ⇢ ETH, 50% en USD ⇢ USDC
-  const usdHalf = usd/2;
-  const ethNeeded = usdHalf / lastPrice;              // en ETH
-  const usdcNeeded = usdHalf;                          // en USDC unités "entières"
-
-  try{
-    // Approve USDC
-    const USDCw = new ethers.Contract(ADDR.USDC, ERC20_ABI, signer);
-    const need = ethers.utils.parseUnits(String(usdcNeeded), usdcDecimals);
-    const allow = await USDCw.allowance(me, ADDR.VAULT);
-    if(allow.lt(need)){
-      const aTx = await USDCw.approve(ADDR.VAULT, need);
-      toast("Approve USDC…"); await aTx.wait();
-    }
-
-    // depositUSDC
-    const VAULTw = new ethers.Contract(ADDR.VAULT, VAULT_ABI, signer);
-    const tx1 = await VAULTw.depositUSDC(need);
-    toast("Dépot USDC…"); await tx1.wait();
-
-    // depositETH
-    const tx2 = await VAULTw.depositETH({value:ethers.utils.parseEther(String(ethNeeded))});
-    toast("Dépot ETH…"); await tx2.wait();
-
-    closeModal();
-    await refreshAll();
-    toast("Dépôt 50/50 confirmé ✅");
-  }catch(e){ console.error(e); toast("Échec du dépôt"); }
-}
-
-/*** ====== Vault deposit buttons ====== ***/
-async function depositETH(){
-  if(!signer){ toast("Connecte ton wallet"); return; }
-  const v = parseFloat($("#vEthAmt").value||"0");
-  if(!v || v<=0){ toast("Montant invalide"); return; }
-  try{
-    const VAULTw = new ethers.Contract(ADDR.VAULT, VAULT_ABI, signer);
-    const tx = await VAULTw.depositETH({value:ethers.utils.parseEther(String(v))});
-    toast("Dépôt ETH…"); await tx.wait(); await refreshAll(); toast("OK ✅");
-  }catch(e){ console.error(e); toast("Échec dépôt ETH"); }
-}
-async function depositUSDC(){
-  if(!signer){ toast("Connecte ton wallet"); return; }
-  const v = parseFloat($("#vUsdcAmt").value||"0");
-  if(!v || v<=0){ toast("Montant invalide"); return; }
-  try{
-    const USDCw = new ethers.Contract(ADDR.USDC, ERC20_ABI, signer);
-    const need = ethers.utils.parseUnits(String(v), usdcDecimals);
-    const allow = await USDCw.allowance(me, ADDR.VAULT);
-    if(allow.lt(need)){ const a=await USDCw.approve(ADDR.VAULT, need); toast("Approve USDC…"); await a.wait(); }
-    const VAULTw = new ethers.Contract(ADDR.VAULT, VAULT_ABI, signer);
-    const tx = await VAULTw.depositUSDC(need);
-    toast("Dépôt USDC…"); await tx.wait(); await refreshAll(); toast("OK ✅");
-  }catch(e){ console.error(e); toast("Échec dépôt USDC"); }
-}
-
-/*** ====== Leaderboard ====== ***/
-async function refreshLeaderboard(){
-  try{
-    const lb = new Map(); // addr -> points
-    // 1) scan des events récents pour lister les participants
-    const latest = await provider.getBlockNumber();
-    const fromBlock = Math.max(0, latest - 60_000); // ~fenêtre large
-    const topicsDepEth  = ethers.utils.id("DepositETH(address,uint256)");
-    const topicsDepUsdc = ethers.utils.id("DepositUSDC(address,uint256)");
-
-    const logsEth  = await provider.getLogs({fromBlock,toBlock:"latest",address:ADDR.VAULT,topics:[topicsDepEth]});
-    const logsUsdc = await provider.getLogs({fromBlock,toBlock:"latest",address:ADDR.VAULT,topics:[topicsDepUsdc]});
-
-    const addrs = new Set();
-    [...logsEth, ...logsUsdc].forEach(l=>{
-      const addr = "0x"+l.topics[1].slice(26);
-      addrs.add(addr.toLowerCase());
-    });
-    if(me) addrs.add(me.toLowerCase());
-
-    // 2) lecture on-chain des points
-    const arr = Array.from(addrs);
-    for(const a of arr){
+  // ========= Leaderboard (events → adresses uniques) + pointsOf
+  async function loadParticipants(){
+    try{
+      const latest = await provider.getBlockNumber();
+      const fromBlock = Math.max(0, latest - 50000);
+      const topics = [
+        vault.filters.DepositETH().topics[0],
+        vault.filters.DepositUSDC().topics[0],
+        vault.filters.WithdrawETH().topics[0],
+        vault.filters.WithdrawUSDC().topics[0],
+      ];
+      const logs = await provider.getLogs({ fromBlock, toBlock:'latest', address: VAULT_ADDRESS, topics:[topics] });
+      const addrs = new Set();
+      for(const lg of logs){
+        // user est indexed topic[1]
+        if(lg.topics[1]) addrs.add('0x'+lg.topics[1].slice(26));
+      }
+      return Array.from(addrs);
+    }catch(e){ console.error(e); return []; }
+  }
+  async function refreshLeaderboard(){
+    const addrs = await loadParticipants();
+    if(me && !addrs.includes(me)) addrs.unshift(me); // ajoute toi
+    const rows = [];
+    for(const a of addrs){
       try{
-        const p = await VAULT.pointsOf(a);
-        const pts = Number(ethers.utils.formatUnits(p, 0)); // points en unités "entières" sur le contrat
-        lb.set(a, pts);
+        const pScaled = await vault.pointsOf(a);
+        const pts = Number(pScaled)/1e6;
+        rows.push({a,pts});
       }catch{}
     }
+    rows.sort((x,y)=>y.pts-x.pts);
+    $("#lbRows").innerHTML = rows.map((r,i)=>`
+      <tr>
+        <td>${i===0?'🥇':i+1}</td>
+        <td><a href="https://base-sepolia.blockscout.com/address/${r.a}" target="_blank">${r.a.slice(0,6)+'…'+r.a.slice(-4)}</a></td>
+        <td>${fmt(r.pts)}</td>
+      </tr>
+    `).join('') || `<tr><td colspan="3" class="muted">Aucun participant détecté.</td></tr>`;
+  }
 
-    // 3) render
-    const rows = [...lb.entries()].sort((x,y)=>y[1]-x[1]).map((e,i)=>{
-      const [addr, pts] = e;
-      return `<tr><td>${i===0?"🥇":i+1}</td><td class="mono"><a href="https://base-sepolia.blockscout.com/address/${addr}" target="_blank">${short(addr)}</a></td><td>${fmt(pts,0)}</td></tr>`;
-    });
-    $("#lbBody").innerHTML = rows.length? rows.join("") : `<tr><td colspan="3" class="muted">Aucun participant détecté…</td></tr>`;
+  // ========= Onglets
+  $$(".tab").forEach(t=>t.onclick=()=>{
+    $$(".tab").forEach(x=>x.classList.remove('active')); t.classList.add('active');
+    ["swap","pools","vaults","leaderboard"].forEach(id=>{ $("#"+id).style.display = (t.dataset.tab===id)?'grid':'none'; });
+    if(t.dataset.tab==="pools"){ refreshTvl(); }
+    if(t.dataset.tab==="leaderboard"){ refreshLeaderboard(); }
+  });
 
-    // Mes points
-    if(me){
-      try{
-        const p = await VAULT.pointsOf(me);
-        $("#myVaultPts").textContent = fmt(Number(ethers.utils.formatUnits(p,0)),0);
-      }catch{}
-    }
-  }catch(e){ console.warn("LB fail",e); }
-}
+  // ========= Swap bouton (dummy tx côté front; si tu veux brancher tes fonctions on-chain de swap, c’est ici)
+  $("#btnSwap").onclick = async ()=>{
+    toast("Demo: bouton Swap n'exécute pas de swap on-chain dans cette version.");
+  };
 
-/*** ====== Refresh global ====== ***/
-async function refreshAll(){
-  await ensureDecimals();
-  await loadSwapStatics();
-  await refreshTVL();
-  await refreshBalances();
-  computeReceive();
-  await refreshLeaderboard();
-}
+  // ========= démarrage
+  async function onReady(){
+    await initContracts();
+    $("#vaultEthApy").textContent = APY_VAULT+'%';
+    $("#vaultUsdcApy").textContent = APY_VAULT+'%';
+    updateQuote();
+    refreshBalances();
+    refreshTvl();
+    refreshLeaderboard();
+  }
+  await ensureProvider().catch(()=>{});
+  if(provider){ onReady(); }
 
-/*** ====== Init ====== ***/
-wireTabs(); wireUI();
-
-(async function init(){
-  try{
-    await ensureDecimals();
-    await loadSwapStatics();
-    renderPoolsRow();
-    computeReceive();
-
-    if(window.ethereum && localStorage.getItem("furia_autoconnect")==="1"){
-      try{ await connect(true); }catch(e){ console.warn("autoconnect",e); }
-    }
-
-    await refreshAll();
-    setInterval(async()=>{ await loadSwapStatics(); await refreshTVL(); await refreshLeaderboard(); }, 10_000);
-  }catch(e){ console.error("init",e); }
+  // rafraîchis prix/TVL/points toutes les 10s
+  setInterval(async ()=>{
+    try{
+      price8 = (await swap.ethUsd()).toString();
+      $("#priceBox").textContent = '$'+(Number(price8)/1e8).toLocaleString();
+      updateQuote();
+      await refreshTvl();
+      await refreshLeaderboard();
+    }catch(e){}
+  }, 10000);
 })();
 </script>
 </body>
