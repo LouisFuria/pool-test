@@ -31,7 +31,7 @@
     .val{ font-weight:800; font-size:22px }
     .small{ font-size:12px; color:var(--muted) }
     .actions{ display:flex; gap:8px; flex-wrap:wrap }
-    .toasts{ position:fixed; right:16px; bottom:16px; display:flex; flex-direction:column; gap:10px }
+    .toasts{ position:fixed; right:16px; bottom:16px; display:flex; flex-direction:column; gap:10px; z-index:50 }
     .toast{ background:var(--elev); border:1px solid var(--border); padding:10px 12px; border-radius:10px; min-width:240px }
     .ok{ border-color:#065f46; background:#065f4628 } .err{ border-color:#7f1d1d; background:#7f1d1d28 }
   </style>
@@ -136,7 +136,7 @@
           <thead><tr><th>#</th><th>Adresse</th><th>Points</th></tr></thead>
           <tbody id="lbBody"></tbody>
         </table>
-        <div class="small" style="margin-top:8px">Participants détectés via les events du vault (dépôts/retraits récents). Points lus on-chain via <code>pointsOf</code>.</div>
+        <div class="small" style="margin-top:8px">Participants détectés via les events du vault (dépôts/retraits). Points lus on-chain via <code>pointsOf</code>.</div>
       </div>
     </div>
   </section>
@@ -192,7 +192,9 @@
   // ====== UI helpers
   const $ = (id)=>document.getElementById(id);
   const toastBox = $("toasts");
-  function toast(msg, type="ok"){ const d=document.createElement("div"); d.className=`toast ${type}`; d.textContent=msg; toastBox.appendChild(d); setTimeout(()=>d.remove(),3000); }
+  function toast(msg, type="ok"){ const d=document.createElement("div"); d.className=`toast ${type}`; d.textContent=msg; toastBox.appendChild(d); setTimeout(()=>d.remove(),3500); }
+
+  // Tabs
   const tabs = { swap:$("swap"), pools:$("pools"), leader:$("leader") };
   function showTab(k){ for(const t of ["swap","pools","leader"]) tabs[t].style.display=(t===k)?"block":"none"; ["tab-swap","tab-pools","tab-leader"].forEach(id=>$(id).classList.remove("active")); $("tab-"+k).classList.add("active"); }
   $("tab-swap").onclick = ()=> showTab("swap");
@@ -201,7 +203,7 @@
 
   // ====== Wallet & providers
   let provider=null, signer=null, me=null, usdcDec=6;
-  if(!window.ethereum){ toast("Installe MetaMask", "err"); return; }
+  if(!window.ethereum){ toast("Installe MetaMask", "err"); }
   provider = new ethers.providers.Web3Provider(window.ethereum);
 
   async function connect(){
@@ -226,7 +228,7 @@
   }
 
   // ====== Contracts
-  let usdcRO, usdcRW, swapRO, swapRW, vaultRO;
+  let usdcRO, usdcRW, swapRO, swapRW, vaultRO, vaultIF;
   async function initContracts(){
     usdcRO = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, provider);
     usdcRW = usdcRO.connect(provider.getSigner());
@@ -234,6 +236,7 @@
     swapRO = new ethers.Contract(SWAP_ADDRESS, SWAP_ABI, provider);
     swapRW = swapRO.connect(provider.getSigner());
     vaultRO = new ethers.Contract(POOL_ADDRESS, VAULT_ABI, provider);
+    vaultIF = new ethers.utils.Interface(VAULT_ABI);
   }
 
   // ====== SWAP logic
@@ -312,7 +315,7 @@
       const [e,u] = await swapRO.tvl();
       tvlUsd = Number(ethers.utils.formatEther(e))*price + Number(ethers.utils.formatUnits(u,6));
       const current = await provider.getBlockNumber();
-      const fromBlock = Math.max(0, current - 100000);
+      const fromBlock = Math.max(0, current - 100000); // ~qq jours
       const topic1 = ethers.utils.id("SwapETHForUSDC(address,uint256,uint256,uint256,uint256)");
       const logs1 = await provider.getLogs({ fromBlock, toBlock: current, address: SWAP_ADDRESS, topics:[topic1] });
       for(const l of logs1){
@@ -354,7 +357,7 @@
   const participants = new Set();
   async function bootstrapParticipants(){
     const current = await provider.getBlockNumber();
-    const fromBlock = Math.max(0, current - 200000);
+    const fromBlock = Math.max(0, current - 1000000); // fenêtre large
     const topics = [
       ethers.utils.id("DepositETH(address,uint256)"),
       ethers.utils.id("DepositUSDC(address,uint256)"),
