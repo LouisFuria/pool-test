@@ -208,11 +208,13 @@
 
   // Swap (prix 8 décimales, fee en bps, TVL lecture optionnelle)
   const SWAP_ABI = [
-    "function ethUsd() view returns (uint256)",   // 8 déc
-    "function feeBps() view returns (uint256)",   // e.g. 30
-    "function USDC() view returns (address)"
-  ];
-
+  "function ethUsd() view returns (uint256)",   // 8 déc
+  "function feeBps() view returns (uint256)",   // e.g. 30
+  "function USDC() view returns (address)",
+  // ↓ appels on-chain
+  "function swapETHforUSDC() payable",
+  "function swapUSDCforETH(uint256 usdcIn)"
+];
   // Vault + points (événements & vues)
   const VAULT_ABI = [
     "function totalETH() view returns (uint256)",
@@ -458,10 +460,57 @@
     if(t.dataset.tab==="leaderboard"){ refreshLeaderboard(); }
   });
 
-  // ========= Swap bouton (dummy tx côté front; si tu veux brancher tes fonctions on-chain de swap, c’est ici)
-  $("#btnSwap").onclick = async ()=>{
-    toast("Demo: bouton Swap n'exécute pas de swap on-chain dans cette version.");
-  };
+ // ========= Swap on-chain
+$("#btnSwap").onclick = async ()=>{
+  try{
+    if(!me){ await connect(); }
+    await ensureProvider(); // s'assure qu'on est bien sur Base Sepolia et qu'on a signer
+
+    const from = $("#swapFrom").value;
+    const to   = $("#swapTo").value;
+    const raw  = $("#swapAmount").value.trim();
+    const amt  = parseFloat(raw);
+    if(!isFinite(amt) || amt<=0){ toast("Montant invalide"); return; }
+
+    const swapSigner = swap.connect(signer);
+
+    if(from==="ETH" && to==="USDC"){
+      // ETH -> USDC (payable)
+      const tx = await swapSigner.swapETHforUSDC({
+        value: ethers.utils.parseEther(String(amt))
+      });
+      toast("Swap ETH→USDC envoyé…");
+      await tx.wait();
+      toast("Swap confirmé ✅");
+    }else if(from==="USDC" && to==="ETH"){
+      // USDC -> ETH (approve puis call)
+      const usdcIn = ethers.utils.parseUnits(String(amt), usdcDecimals);
+      const uSigner = usdc.connect(signer);
+      const allowance = await usdc.allowance(me, SWAP_ADDRESS);
+      if(allowance.lt(usdcIn)){
+        toast("Approve USDC…");
+        const aTx = await uSigner.approve(SWAP_ADDRESS, usdcIn);
+        await aTx.wait();
+      }
+      const tx = await swapSigner.swapUSDCforETH(usdcIn);
+      toast("Swap USDC→ETH envoyé…");
+      await tx.wait();
+      toast("Swap confirmé ✅");
+    }else{
+      toast("Sélection invalide");
+      return;
+    }
+
+    // Refresh UI
+    await refreshBalances();
+    await refreshTvl();
+    await refreshLeaderboard();
+    updateQuote();
+  }catch(e){
+    console.error(e);
+    toast("Échec du swap");
+  }
+};
 
   // ========= démarrage
   async function onReady(){
