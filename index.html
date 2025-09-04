@@ -24,11 +24,13 @@
     .card{ background:linear-gradient(180deg,#ffffff08,#0000),var(--card); border:1px solid var(--border); border-radius:16px }
     .card-h{ padding:12px 16px; border-bottom:1px solid var(--border); text-transform:uppercase; letter-spacing:.1em; color:var(--muted); font-size:12px }
     .card-c{ padding:16px }
+    input,select{ width:100%; padding:12px; border-radius:12px; background:var(--elev); border:1px solid var(--border); color:var(--txt); outline:none }
+    table{ width:100%; border-collapse:collapse } th,td{ padding:10px 8px; border-bottom:1px solid var(--border); text-align:left } th{ color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.08em }
+    .pill{ padding:6px 10px; border:1px solid var(--border); border-radius:999px; font-size:12px; color:var(--muted) }
     .stat{ display:flex; gap:12px; align-items:center; border:1px solid var(--border); background:var(--elev); border-radius:14px; padding:12px 14px }
     .val{ font-weight:800; font-size:22px }
     .small{ font-size:12px; color:var(--muted) }
-    table{ width:100%; border-collapse:collapse } th,td{ padding:10px 8px; border-bottom:1px solid var(--border); text-align:left } th{ color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.08em }
-    .pill{ padding:6px 10px; border:1px solid var(--border); border-radius:999px; font-size:12px; color:var(--muted) }
+    .actions{ display:flex; gap:8px; flex-wrap:wrap }
     .toasts{ position:fixed; right:16px; bottom:16px; display:flex; flex-direction:column; gap:10px }
     .toast{ background:var(--elev); border:1px solid var(--border); padding:10px 12px; border-radius:10px; min-width:240px }
     .ok{ border-color:#065f46; background:#065f4628 } .err{ border-color:#7f1d1d; background:#7f1d1d28 }
@@ -55,12 +57,38 @@
     </nav>
   </div>
 
-  <!-- SWAP (simplifié, identique à avant si tu l’utilises) -->
+  <!-- SWAP -->
   <section id="swap" class="grid g2">
     <div class="card">
       <div class="card-h">Swap</div>
       <div class="card-c grid">
-        <div class="stat"><div style="flex:1">À faire</div><div class="val small">Si tu utilises le swap fixe, pense à définir SWAP_ADDRESS ci-dessous.</div></div>
+        <div class="row" style="display:flex;gap:10px;align-items:center">
+          <select id="fromTok">
+            <option value="ETH">ETH</option>
+            <option value="USDC">USDC</option>
+          </select>
+          <button class="btn" id="switchPair">⇄</button>
+          <select id="toTok">
+            <option value="USDC">USDC</option>
+            <option value="ETH">ETH</option>
+          </select>
+        </div>
+        <input id="pay" inputmode="decimal" placeholder="You pay…" />
+        <div class="actions">
+          <button class="btn" data-q="25">25%</button>
+          <button class="btn" data-q="50">50%</button>
+          <button class="btn" data-q="75">75%</button>
+          <button class="btn" data-q="100">100%</button>
+        </div>
+        <div class="stat">
+          <div style="flex:1">
+            <div class="small">You Receive</div>
+            <div class="val" id="receive">—</div>
+            <div class="small" id="quote">(prix fixe, slippage négl.)</div>
+          </div>
+          <button id="swapBtn" class="btn pri">Swap</button>
+        </div>
+        <div class="small" id="balances">Solde: —</div>
       </div>
     </div>
     <div class="card">
@@ -73,12 +101,20 @@
     </div>
   </section>
 
-  <!-- POOLS (placeholder) -->
+  <!-- POOLS -->
   <section id="pools" style="display:none">
-    <div class="card">
+    <div class="grid g3" style="margin-top:12px;">
+      <div class="stat"><div style="flex:1">TVL total</div><div class="val" id="tvlAll">—</div></div>
+      <div class="stat"><div style="flex:1">Volume 24h</div><div class="val" id="vol24">—</div></div>
+      <div class="stat"><div style="flex:1">Fees 24h</div><div class="val" id="fee24">—</div></div>
+    </div>
+    <div class="card" style="margin-top:16px;">
       <div class="card-h">Pools</div>
       <div class="card-c">
-        <div class="small">À venir (liste + stats). Le leaderboard fonctionne déjà.</div>
+        <table>
+          <thead><tr><th>Pair</th><th>Fee</th><th>TVL</th><th>Vol(24h)</th><th>Fees(24h)</th><th>APR(24h)</th></tr></thead>
+          <tbody id="poolsBody"></tbody>
+        </table>
       </div>
     </div>
   </section>
@@ -100,7 +136,7 @@
           <thead><tr><th>#</th><th>Adresse</th><th>Points</th></tr></thead>
           <tbody id="lbBody"></tbody>
         </table>
-        <div class="small" style="margin-top:8px">Participants détectés via les events du vault (dépôts/retraits récents). Puis points lus on-chain via <code>pointsOf</code>.</div>
+        <div class="small" style="margin-top:8px">Participants détectés via les events du vault (dépôts/retraits récents). Points lus on-chain via <code>pointsOf</code>.</div>
       </div>
     </div>
   </section>
@@ -112,10 +148,17 @@
 (async () => {
   // ====== ADRESSES (Base Sepolia)
   const USDC_ADDRESS = "0x3F532813FEB32E1990d9c7Ca8Cb29b62C573512B";
-  const POOL_ADDRESS = "0x1720e9ef567d1f29076EcE7E47CBc5F12F52F335"; // DualTokenVaultWithPoints
-  const SWAP_ADDRESS = "SWAP_ADDRESS_HERE"; // optionnel si tu n'utilises pas encore le swap
+  const POOL_ADDRESS = "0x1720e9ef567d1f29076EcE7E47CBc5F12F52F335"; // Vault with points
+  const SWAP_ADDRESS = "0x9965B8ef813E6247c6788AF7836756a579474484"; // FixedPriceSwap
 
-  // ====== ABIs (minimum nécessaire)
+  // ====== ABIs
+  const ERC20_ABI = [
+    {"type":"function","name":"decimals","stateMutability":"view","inputs":[],"outputs":[{"type":"uint8"}]},
+    {"type":"function","name":"balanceOf","stateMutability":"view","inputs":[{"name":"o","type":"address"}],"outputs":[{"type":"uint256"}]},
+    {"type":"function","name":"allowance","stateMutability":"view","inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"outputs":[{"type":"uint256"}]},
+    {"type":"function","name":"approve","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"type":"bool"}]},
+    {"type":"function","name":"transferFrom","stateMutability":"nonpayable","inputs":[{"name":"from","type":"address"},{"name":"to","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"type":"bool"}]}
+  ];
   const VAULT_ABI = [
     {"type":"function","name":"pendingPointsScaled","stateMutability":"view","inputs":[{"name":"u","type":"address"}],"outputs":[{"type":"uint256"}]},
     {"type":"function","name":"pointsOf","stateMutability":"view","inputs":[{"name":"u","type":"address"}],"outputs":[{"name":"points","type":"uint256"},{"name":"decimals_","type":"uint8"}]},
@@ -127,27 +170,37 @@
   const SWAP_ABI = [
     {"type":"function","name":"ethUsd","stateMutability":"view","inputs":[],"outputs":[{"type":"uint256"}]},
     {"type":"function","name":"feeBps","stateMutability":"view","inputs":[],"outputs":[{"type":"uint256"}]},
-    {"type":"function","name":"tvl","stateMutability":"view","inputs":[],"outputs":[{"type":"uint256"},{"type":"uint256"}]}
+    {"type":"function","name":"tvl","stateMutability":"view","inputs":[],"outputs":[{"type":"uint256"},{"type":"uint256"}]},
+    {"type":"function","name":"swapETHForUSDC","stateMutability":"payable","inputs":[],"outputs":[]},
+    {"type":"function","name":"swapUSDCForETH","stateMutability":"nonpayable","inputs":[{"name":"usdcIn","type":"uint256"}],"outputs":[]},
+    {"type":"event","name":"SwapETHForUSDC","inputs":[
+      {"name":"user","type":"address","indexed":true},
+      {"name":"ethIn","type":"uint256","indexed":false},
+      {"name":"usdcOut","type":"uint256","indexed":false},
+      {"name":"price8","type":"uint256","indexed":false},
+      {"name":"feeBps","type":"uint256","indexed":false}
+    ],"anonymous":false},
+    {"type":"event","name":"SwapUSDCForETH","inputs":[
+      {"name":"user","type":"address","indexed":true},
+      {"name":"usdcIn","type":"uint256","indexed":false},
+      {"name":"ethOut","type":"uint256","indexed":false},
+      {"name":"price8","type":"uint256","indexed":false},
+      {"name":"feeBps","type":"uint256","indexed":false}
+    ],"anonymous":false}
   ];
 
   // ====== UI helpers
   const $ = (id)=>document.getElementById(id);
   const toastBox = $("toasts");
   function toast(msg, type="ok"){ const d=document.createElement("div"); d.className=`toast ${type}`; d.textContent=msg; toastBox.appendChild(d); setTimeout(()=>d.remove(),3000); }
-
-  // Tabs
   const tabs = { swap:$("swap"), pools:$("pools"), leader:$("leader") };
-  function showTab(k){
-    for(const t of ["swap","pools","leader"]) tabs[t].style.display = (t===k)?"block":"none";
-    for(const id of ["tab-swap","tab-pools","tab-leader"]) $(id).classList.remove("active");
-    $("tab-"+k).classList.add("active");
-  }
+  function showTab(k){ for(const t of ["swap","pools","leader"]) tabs[t].style.display=(t===k)?"block":"none"; ["tab-swap","tab-pools","tab-leader"].forEach(id=>$(id).classList.remove("active")); $("tab-"+k).classList.add("active"); }
   $("tab-swap").onclick = ()=> showTab("swap");
   $("tab-pools").onclick = ()=> showTab("pools");
   $("tab-leader").onclick = ()=> showTab("leader");
 
-  // Wallet
-  let provider=null, signer=null, me=null;
+  // ====== Wallet & providers
+  let provider=null, signer=null, me=null, usdcDec=6;
   if(!window.ethereum){ toast("Installe MetaMask", "err"); return; }
   provider = new ethers.providers.Web3Provider(window.ethereum);
 
@@ -159,8 +212,8 @@
     $("meAddr").textContent = me.slice(0,6)+"…"+me.slice(-4);
     await updateNet();
     await initContracts();
-    await bootstrapParticipants(); // construit la liste
-    await refreshLeaderboard();    // premier affichage
+    await bootstrapParticipants();
+    await refreshAll();
   }
   $("connect").onclick = connect;
 
@@ -172,33 +225,136 @@
     }
   }
 
-  // Contracts
-  let vaultRO, vaultIF, swapRO;
+  // ====== Contracts
+  let usdcRO, usdcRW, swapRO, swapRW, vaultRO;
   async function initContracts(){
+    usdcRO = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, provider);
+    usdcRW = usdcRO.connect(provider.getSigner());
+    try{ usdcDec = await usdcRO.decimals(); }catch{}
+    swapRO = new ethers.Contract(SWAP_ADDRESS, SWAP_ABI, provider);
+    swapRW = swapRO.connect(provider.getSigner());
     vaultRO = new ethers.Contract(POOL_ADDRESS, VAULT_ABI, provider);
-    vaultIF = new ethers.utils.Interface(VAULT_ABI);
-    if(SWAP_ADDRESS && SWAP_ADDRESS.startsWith("0x")){
-      try{ swapRO = new ethers.Contract(SWAP_ADDRESS, SWAP_ABI, provider); }catch(e){}
-    }
   }
 
-  // ===== SWAP info (si dispo)
-  async function refreshSwapInfo(){
-    if(!swapRO) return;
+  // ====== SWAP logic
+  const fromSel=$("fromTok"), toSel=$("toTok"), payIn=$("pay"), recvEl=$("receive");
+  $("switchPair").onclick = ()=>{ const a=fromSel.value,b=toSel.value; fromSel.value=b; toSel.value=a; computeQuote(); };
+  payIn.oninput = computeQuote;
+  document.querySelectorAll('[data-q]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      if(!me){ toast("Connecte ton wallet", "err"); return; }
+      const pct = Number(btn.dataset.q);
+      if(fromSel.value==="ETH"){
+        const bal = await provider.getBalance(me);
+        payIn.value = (Number(ethers.utils.formatEther(bal))*pct/100).toString();
+      }else{
+        const bal = await usdcRO.balanceOf(me);
+        payIn.value = (Number(ethers.utils.formatUnits(bal,usdcDec))*pct/100).toString();
+      }
+      computeQuote();
+    };
+  });
+
+  async function readPriceFeeTVL(){
     try{
-      const [p8,f,tvl] = await Promise.all([swapRO.ethUsd(), swapRO.feeBps(), swapRO.tvl()]);
-      $("price").textContent = "$"+Number(ethers.utils.formatUnits(p8,8)).toLocaleString();
+      const [p8,f,tvl] = await Promise.all([ swapRO.ethUsd(), swapRO.feeBps(), swapRO.tvl() ]);
+      const price = Number(ethers.utils.formatUnits(p8,8));
+      $("price").textContent = price ? `$${price.toLocaleString()}` : "—";
       $("fees").textContent = (Number(f)/100).toFixed(2)+"%";
       const [e,u] = tvl;
       $("tvlSwap").textContent = `${Number(ethers.utils.formatEther(e)).toFixed(4)} ETH + ${Number(ethers.utils.formatUnits(u,6)).toLocaleString()} USDC`;
-    }catch(e){}
+      return { price, feeBps:Number(f) };
+    }catch(e){ console.error(e); return {price:0,feeBps:0}; }
   }
 
-  // ===== Participants: scan des events récents
+  async function computeQuote(){
+    const { price, feeBps } = await readPriceFeeTVL();
+    const from = fromSel.value, to = toSel.value;
+    const amt = Number((payIn.value||"0").trim()); if(!amt||!price){ recvEl.textContent="—"; return; }
+    if(from==="ETH" && to==="USDC"){
+      const gross = amt*price; const fee = gross*feeBps/10000;
+      recvEl.textContent = (gross - fee).toLocaleString(undefined,{maximumFractionDigits:2})+" USDC";
+    }else if(from==="USDC" && to==="ETH"){
+      const fee = amt*feeBps/10000; const net = amt - fee; const eth = net/price;
+      recvEl.textContent = eth.toFixed(6)+" ETH";
+    }else recvEl.textContent="—";
+
+    if(me){
+      const [ethB, usdcB] = await Promise.all([ provider.getBalance(me), usdcRO.balanceOf(me) ]);
+      $("balances").textContent = `Solde: ${Number(ethers.utils.formatEther(ethB)).toFixed(4)} ETH · ${Number(ethers.utils.formatUnits(usdcB,usdcDec)).toFixed(2)} USDC`;
+    }
+  }
+
+  $("swapBtn").onclick = async ()=>{
+    if(!me) return toast("Connecte ton wallet", "err");
+    const from=fromSel.value, to=toSel.value, amtStr=(payIn.value||"0").trim(); const amt=Number(amtStr);
+    if(!amt||amt<=0) return;
+    try{
+      if(from==="ETH" && to==="USDC"){
+        const tx = await swapRW.swapETHForUSDC({ value: ethers.utils.parseEther(amtStr) });
+        await tx.wait(); toast("✅ Swap ETH→USDC confirmé");
+      }else if(from==="USDC" && to==="ETH"){
+        const amount = ethers.utils.parseUnits(amtStr, usdcDec);
+        const allowance = await usdcRO.allowance(me, SWAP_ADDRESS);
+        if(allowance.lt(amount)){ const a=await usdcRW.approve(SWAP_ADDRESS, amount); await a.wait(); }
+        const tx = await swapRW.swapUSDCForETH(amount); await tx.wait(); toast("✅ Swap USDC→ETH confirmé");
+      }else{return;}
+      payIn.value=""; recvEl.textContent="—";
+      await refreshAll();
+    }catch(e){ console.error(e); toast("❌ Échec du swap", "err"); }
+  };
+
+  // ====== POOLS (stats via logs du swap)
+  async function refreshPools(){
+    const { price, feeBps } = await readPriceFeeTVL();
+    let vol24=0, fees24=0, tvlUsd=0;
+    try{
+      const [e,u] = await swapRO.tvl();
+      tvlUsd = Number(ethers.utils.formatEther(e))*price + Number(ethers.utils.formatUnits(u,6));
+      const current = await provider.getBlockNumber();
+      const fromBlock = Math.max(0, current - 100000);
+      const topic1 = ethers.utils.id("SwapETHForUSDC(address,uint256,uint256,uint256,uint256)");
+      const logs1 = await provider.getLogs({ fromBlock, toBlock: current, address: SWAP_ADDRESS, topics:[topic1] });
+      for(const l of logs1){
+        const iface = new ethers.utils.Interface(SWAP_ABI);
+        const ev = iface.parseLog(l);
+        const usdcOut = Number(ethers.utils.formatUnits(ev.args.usdcOut,6));
+        const fee = usdcOut * feeBps / (10000 - feeBps); // approx
+        vol24 += usdcOut; fees24 += fee;
+      }
+      const topic2 = ethers.utils.id("SwapUSDCForETH(address,uint256,uint256,uint256,uint256)");
+      const logs2 = await provider.getLogs({ fromBlock, toBlock: current, address: SWAP_ADDRESS, topics:[topic2] });
+      for(const l of logs2){
+        const iface = new ethers.utils.Interface(SWAP_ABI);
+        const ev = iface.parseLog(l);
+        const usdcIn = Number(ethers.utils.formatUnits(ev.args.usdcIn,6));
+        const fee = usdcIn * feeBps / 10000;
+        vol24 += usdcIn; fees24 += fee;
+      }
+    }catch(e){ console.error(e); }
+
+    $("tvlAll").textContent = "$"+tvlUsd.toLocaleString(undefined,{maximumFractionDigits:2});
+    $("vol24").textContent = "$"+vol24.toLocaleString(undefined,{maximumFractionDigits:2});
+    $("fee24").textContent = "$"+fees24.toLocaleString(undefined,{maximumFractionDigits:2});
+
+    const apr = tvlUsd>0 ? (fees24*365/tvlUsd*100) : 0;
+    $("poolsBody").innerHTML = `
+      <tr>
+        <td>ETH / USDC (Fixed)</td>
+        <td>${(await swapRO.feeBps())/100}%</td>
+        <td>$${tvlUsd.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+        <td>$${vol24.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+        <td>$${fees24.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+        <td>${isFinite(apr)?apr.toFixed(2):"0.00"}%</td>
+      </tr>
+    `;
+  }
+
+  // ====== Leaderboard (participants + points toutes les 10s)
   const participants = new Set();
   async function bootstrapParticipants(){
     const current = await provider.getBlockNumber();
-    const fromBlock = Math.max(0, current - 200000); // ~quelques semaines
+    const fromBlock = Math.max(0, current - 200000);
     const topics = [
       ethers.utils.id("DepositETH(address,uint256)"),
       ethers.utils.id("DepositUSDC(address,uint256)"),
@@ -214,56 +370,48 @@
     if(me) participants.add(me);
   }
 
-  // ===== Leaderboard refresh (toutes les 10s)
   async function refreshLeaderboard(){
-    try{
-      // Toujours inclure le compte connecté si présent
-      if(me) participants.add(me);
-
-      const addrs = Array.from(participants);
-      const rows = [];
-
-      // Lecture des points pour chacun
-      for(const a of addrs){
-        try{
-          const res = await vaultRO.pointsOf(a);
-          const pts = Number(ethers.utils.formatUnits(res.points || res[0] || "0", (res.decimals_ || res[1] || 6)));
-          rows.push({ a, pts });
-        }catch(e){}
-      }
-
-      // Tri décroissant
-      rows.sort((x,y)=> y.pts - x.pts);
-
-      // Rendu tableau
-      const body = $("lbBody"); body.innerHTML = "";
-      rows.forEach((r,i)=>{
-        const tr = document.createElement("tr");
-        const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":(i+1);
-        tr.innerHTML = `<td>${medal}</td><td><a href="https://sepolia.basescan.org/address/${r.a}" target="_blank" style="color:#fff">${r.a.slice(0,6)}…${r.a.slice(-4)}</a></td><td>${r.pts.toLocaleString(undefined,{maximumFractionDigits:2})}</td>`;
-        body.appendChild(tr);
-      });
-
-      // Mon rang + mes points
-      if(me){
-        const mine = rows.findIndex(r=> r.a.toLowerCase()===me.toLowerCase());
-        $("myRank").textContent = mine>=0 ? (mine+1) : "—";
-        const my = rows.find(r=> r.a.toLowerCase()===me.toLowerCase());
-        $("myPts").textContent = my ? my.pts.toLocaleString(undefined,{maximumFractionDigits:2}) : "—";
-      }
-    }catch(e){ console.error(e); }
+    if(me) participants.add(me);
+    const addrs = Array.from(participants);
+    const rows = [];
+    for(const a of addrs){
+      try{
+        const res = await vaultRO.pointsOf(a);
+        const pts = Number(ethers.utils.formatUnits(res.points||res[0]||"0", (res.decimals_||res[1]||6)));
+        rows.push({ a, pts });
+      }catch(e){}
+    }
+    rows.sort((x,y)=> y.pts - x.pts);
+    const body = $("lbBody"); body.innerHTML = "";
+    rows.forEach((r,i)=>{
+      const tr = document.createElement("tr");
+      const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":(i+1);
+      tr.innerHTML = `<td>${medal}</td><td><a href="https://sepolia.basescan.org/address/${r.a}" target="_blank" style="color:#fff">${r.a.slice(0,6)}…${r.a.slice(-4)}</a></td><td>${r.pts.toLocaleString(undefined,{maximumFractionDigits:2})}</td>`;
+      body.appendChild(tr);
+    });
+    if(me){
+      const mine = rows.findIndex(r=> r.a.toLowerCase()===me.toLowerCase());
+      $("myRank").textContent = mine>=0 ? (mine+1) : "—";
+      const my = rows.find(r=> r.a.toLowerCase()===me.toLowerCase());
+      $("myPts").textContent = my ? my.pts.toLocaleString(undefined,{maximumFractionDigits:2}) : "—";
+    }
   }
 
-  // Intervalles
-  setInterval(refreshLeaderboard, 10000);
-  setInterval(refreshSwapInfo, 15000);
+  // ====== Global refresh
+  async function refreshAll(){
+    await computeQuote();
+    await refreshPools();
+    await refreshLeaderboard();
+  }
 
-  // Init (sans connexion encore)
+  // Init
   await updateNet();
   await initContracts();
-  await refreshSwapInfo();
   await bootstrapParticipants();
-  await refreshLeaderboard();
+  await refreshAll();
+
+  setInterval(refreshLeaderboard, 10000);
+  setInterval(()=>{ readPriceFeeTVL(); refreshPools(); }, 15000);
 
   if(window.ethereum){
     window.ethereum.on?.("accountsChanged", ()=> location.reload());
