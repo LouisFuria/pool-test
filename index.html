@@ -40,7 +40,7 @@
   .big{font-size:28px}
   .swap-ctrls{display:grid;grid-template-columns:1fr 58px 1fr;gap:10px}
   .swap-arrows{display:flex;align-items:center;justify-content:center}
-  .swap-arrows .pill{margin-left:-4px} /* décalage à gauche comme demandé */
+  .swap-arrows .pill{margin-left:-4px} /* décalage à gauche */
   .table{width:100%;border-collapse:collapse}
   .table th,.table td{padding:14px;border-bottom:1px solid #1b2235;text-align:left}
   .badge{font-weight:800;color:#fff;background:var(--primary);padding:2px 8px;border-radius:8px}
@@ -59,7 +59,7 @@
     <div class="brand">FURIA DEX</div>
     <div class="crumb">· Base Sepolia</div>
     <div class="right">
-      <div id="netChip" class="chip">Réseau: Base Sepolia</div>
+      <div id="netChip" class="chip">Réseau: —</div>
       <button id="btnConnect" class="btn">Connect</button>
     </div>
   </div>
@@ -191,14 +191,15 @@
 <script>
 (async function(){
   // ========= CONFIG
-  const CHAIN_ID_HEX = '0x14A54'; // 84532 = Base Sepolia
-  const SWAP_ADDRESS  = '0x9965B8ef813E6247c6788AF7836756a579474484';
-  const VAULT_ADDRESS = '0xfC39B74a0c3AD291f88224ec620410c32f3659e4';
-  const USDC_ADDRESS  = '0x3F532813FEB32E1990d9c7Ca8Cb29b62C573512B';
+  const CHAIN_ID_DEC = 84532;             // Base Sepolia
+  const CHAIN_ID_HEX = '0x14A54';
+  const SWAP_ADDRESS  = '0x9965B8ef813E6247c6788AF7836756a579474484'; // FixedPriceSwap
+  const VAULT_ADDRESS = '0xfC39B74a0c3AD291f88224ec620410c32f3659e4'; // DualTokenVaultWithPoints
+  const USDC_ADDRESS  = '0x3F532813FEB32E1990d9c7Ca8Cb29b62C573512B'; // USDCMock
   const APY_POOL = 20;   // affichage
   const APY_VAULT = 25;  // affichage
 
-  // ========= ABIs minimales
+  // ========= ABIs
   const ERC20_ABI = [
     "function decimals() view returns (uint8)",
     "function balanceOf(address) view returns (uint256)",
@@ -206,16 +207,17 @@
     "function approve(address spender, uint256 amount) returns (bool)"
   ];
 
-  // Swap (prix 8 décimales, fee en bps, TVL lecture optionnelle)
+  // Swap avec events pour points + fonctions de swap
   const SWAP_ABI = [
-  "function ethUsd() view returns (uint256)",   // 8 déc
-  "function feeBps() view returns (uint256)",   // e.g. 30
-  "function USDC() view returns (address)",
-  // ↓ appels on-chain
-  "function swapETHforUSDC() payable",
-  "function swapUSDCforETH(uint256 usdcIn)"
-];
-  // Vault + points (événements & vues)
+    "function ethUsd() view returns (uint256)",   // 8 déc
+    "function feeBps() view returns (uint256)",   // e.g. 30
+    "function USDC() view returns (address)",
+    "function swapETHforUSDC() payable",
+    "function swapUSDCforETH(uint256 usdcIn)",
+    "event SwapETHforUSDC(address indexed user, uint256 ethIn, uint256 usdcOut, uint256 price8, uint256 feeBps)",
+    "event SwapUSDCforETH(address indexed user, uint256 usdcIn, uint256 ethOut, uint256 price8, uint256 feeBps)"
+  ];
+
   const VAULT_ABI = [
     "function totalETH() view returns (uint256)",
     "function totalUSDC() view returns (uint256)",
@@ -235,7 +237,7 @@
   // ========= UI helpers
   const $ = sel => document.querySelector(sel);
   const $$ = sel => Array.from(document.querySelectorAll(sel));
-  function toast(t){ const el=$("#toast"); el.textContent=t; el.style.display='block'; setTimeout(()=>el.style.display='none',2500); }
+  function toast(t){ const el=$("#toast"); el.textContent=t; el.style.display='block'; setTimeout(()=>el.style.display='none',2600); }
   function fmtUsd(n){ return '$'+ Number(n).toLocaleString(undefined,{maximumFractionDigits:2}); }
   function fmt(n){ return Number(n).toLocaleString(undefined,{maximumFractionDigits:6}); }
 
@@ -244,7 +246,8 @@
     if(!window.ethereum){ toast('Installe MetaMask.'); throw new Error('no wallet'); }
     provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
     const net = await provider.getNetwork();
-    if (net.chainId !== 84532){
+    $("#netChip").textContent = `Réseau: ${net.name || net.chainId}`;
+    if (net.chainId !== CHAIN_ID_DEC){
       try{
         await window.ethereum.request({
           method:'wallet_switchEthereumChain', params:[{ chainId: CHAIN_ID_HEX }]
@@ -277,7 +280,7 @@
     const base = signer ?? provider;
     swap = new ethers.Contract(SWAP_ADDRESS, SWAP_ABI, base);
     vault= new ethers.Contract(VAULT_ADDRESS,VAULT_ABI, base);
-    const usdcAddr = USDC_ADDRESS || await swap.USDC();
+    const usdcAddr = USDC_ADDRESS || await swap.USDC().catch(()=>USDC_ADDRESS);
     usdc = new ethers.Contract(usdcAddr, ERC20_ABI, base);
     usdcDecimals = await usdc.decimals().catch(()=>6);
     price8 = (await swap.ethUsd()).toString();
@@ -338,7 +341,6 @@
   $("#btnFlip").onclick   = ()=>{ const a=$("#swapFrom").value; $("#swapFrom").value=$("#swapTo").value; $("#swapTo").value=a; updateQuote(); };
   $$(".pct").forEach(b=>b.onclick=async()=>{
     if(!me){ toast('Connecte ton wallet'); return;}
-    // set % based on selected "from" token balance
     const from = $("#swapFrom").value;
     if(from==='ETH'){
       const bal = await provider.getBalance(me);
@@ -425,7 +427,6 @@
       const logs = await provider.getLogs({ fromBlock, toBlock:'latest', address: VAULT_ADDRESS, topics:[topics] });
       const addrs = new Set();
       for(const lg of logs){
-        // user est indexed topic[1]
         if(lg.topics[1]) addrs.add('0x'+lg.topics[1].slice(26));
       }
       return Array.from(addrs);
@@ -433,7 +434,7 @@
   }
   async function refreshLeaderboard(){
     const addrs = await loadParticipants();
-    if(me && !addrs.includes(me)) addrs.unshift(me); // ajoute toi
+    if(me && !addrs.includes(me)) addrs.unshift(me);
     const rows = [];
     for(const a of addrs){
       try{
@@ -452,65 +453,102 @@
     `).join('') || `<tr><td colspan="3" class="muted">Aucun participant détecté.</td></tr>`;
   }
 
+  // ========= Points "swap" (10 pts / $) via events du contrat de swap
+  async function refreshMySwapPoints(){
+    try{
+      if(!provider || !SWAP_ADDRESS){ $("#mySwapPts").textContent = '0'; return; }
+      const who = me || (await (signer ?? provider).listAccounts())[0];
+      if(!who){ $("#mySwapPts").textContent = '—'; return; }
+
+      const latest = await provider.getBlockNumber();
+      const fromBlock = Math.max(0, latest - 100000);
+
+      const iface = new ethers.utils.Interface(SWAP_ABI);
+      const t1 = iface.getEventTopic("SwapETHforUSDC");
+      const t2 = iface.getEventTopic("SwapUSDCforETH");
+
+      const logs = await provider.getLogs({
+        address: SWAP_ADDRESS,
+        fromBlock,
+        toBlock: 'latest',
+        topics: [[t1, t2]]
+      });
+
+      let usdTotal = 0;
+      for(const lg of logs){
+        const ev = iface.parseLog(lg);
+        const u  = ev.args.user.toLowerCase();
+        if(u !== who.toLowerCase()) continue;
+
+        if(ev.name === "SwapETHforUSDC"){
+          const ethIn = Number(ethers.utils.formatEther(ev.args.ethIn));
+          const p8    = Number(ev.args.price8)/1e8;
+          usdTotal += ethIn * p8;
+        }else if(ev.name === "SwapUSDCforETH"){
+          const usdcIn = Number(ev.args.usdcIn) / 10**usdcDecimals;
+          usdTotal += usdcIn;
+        }
+      }
+
+      const points = usdTotal * 10; // 10 pts / $
+      $("#mySwapPts").textContent = who ? Math.floor(points).toLocaleString() : '—';
+    }catch(e){
+      console.error(e);
+    }
+  }
+
   // ========= Onglets
   $$(".tab").forEach(t=>t.onclick=()=>{
     $$(".tab").forEach(x=>x.classList.remove('active')); t.classList.add('active');
-    ["swap","pools","vaults","leaderboard"].forEach(id=>{ $("#"+id).style.display = (t.dataset.tab===id)?'grid':'none'; });
-    if(t.dataset.tab==="pools"){ refreshTvl(); }
+    ["swap","pools","vaults","leaderboard"].forEach(id=>{ $("#"+id).style.display = (t.dataset.tab===id)?(id==='swap'?'grid':'block'):'none'; });
+    if(t.dataset.tab==="pools"){ refreshTvl(); refreshMySwapPoints(); }
     if(t.dataset.tab==="leaderboard"){ refreshLeaderboard(); }
   });
 
- // ========= Swap on-chain
-$("#btnSwap").onclick = async ()=>{
-  try{
-    if(!me){ await connect(); }
-    await ensureProvider(); // s'assure qu'on est bien sur Base Sepolia et qu'on a signer
+  // ========= Swap bouton (on-chain)
+  $("#btnSwap").onclick = async ()=>{
+    try{
+      if(!me){ await connect(); }
+      const from = $("#swapFrom").value, to=$("#swapTo").value;
+      let amt = parseFloat($("#swapAmount").value);
+      if(!isFinite(amt) || amt<=0){ toast("Montant invalide"); return; }
 
-    const from = $("#swapFrom").value;
-    const to   = $("#swapTo").value;
-    const raw  = $("#swapAmount").value.trim();
-    const amt  = parseFloat(raw);
-    if(!isFinite(amt) || amt<=0){ toast("Montant invalide"); return; }
+      const swapSigner = swap.connect(signer);
 
-    const swapSigner = swap.connect(signer);
-
-    if(from==="ETH" && to==="USDC"){
-      // ETH -> USDC (payable)
-      const tx = await swapSigner.swapETHforUSDC({
-        value: ethers.utils.parseEther(String(amt))
-      });
-      toast("Swap ETH→USDC envoyé…");
-      await tx.wait();
-      toast("Swap confirmé ✅");
-    }else if(from==="USDC" && to==="ETH"){
-      // USDC -> ETH (approve puis call)
-      const usdcIn = ethers.utils.parseUnits(String(amt), usdcDecimals);
-      const uSigner = usdc.connect(signer);
-      const allowance = await usdc.allowance(me, SWAP_ADDRESS);
-      if(allowance.lt(usdcIn)){
-        toast("Approve USDC…");
-        const aTx = await uSigner.approve(SWAP_ADDRESS, usdcIn);
-        await aTx.wait();
+      if(from==='ETH' && to==='USDC'){
+        const tx = await swapSigner.swapETHforUSDC({
+          value: ethers.utils.parseEther(String(amt))
+        });
+        toast("Swap ETH→USDC envoyé…");
+        await tx.wait();
+        toast("Swap confirmé ✅");
+      } else if(from==='USDC' && to==='ETH'){
+        const usdcIn = ethers.utils.parseUnits(String(amt), usdcDecimals);
+        const allowance = await usdc.allowance(me, SWAP_ADDRESS);
+        if(allowance.lt(usdcIn)){
+          const txa = await usdc.connect(signer).approve(SWAP_ADDRESS, usdcIn);
+          toast("Approve USDC…");
+          await txa.wait();
+        }
+        const tx = await swapSigner.swapUSDCforETH(usdcIn);
+        toast("Swap USDC→ETH envoyé…");
+        await tx.wait();
+        toast("Swap confirmé ✅");
+      } else {
+        toast("Sélection invalide.");
+        return;
       }
-      const tx = await swapSigner.swapUSDCforETH(usdcIn);
-      toast("Swap USDC→ETH envoyé…");
-      await tx.wait();
-      toast("Swap confirmé ✅");
-    }else{
-      toast("Sélection invalide");
-      return;
-    }
 
-    // Refresh UI
-    await refreshBalances();
-    await refreshTvl();
-    await refreshLeaderboard();
-    updateQuote();
-  }catch(e){
-    console.error(e);
-    toast("Échec du swap");
-  }
-};
+      // refresh
+      await refreshBalances();
+      await refreshTvl();
+      await refreshMySwapPoints();
+      updateQuote();
+    }catch(e){
+      console.error(e);
+      toast("Échec du swap");
+    }
+  };
 
   // ========= démarrage
   async function onReady(){
@@ -521,6 +559,7 @@ $("#btnSwap").onclick = async ()=>{
     refreshBalances();
     refreshTvl();
     refreshLeaderboard();
+    refreshMySwapPoints();
   }
   await ensureProvider().catch(()=>{});
   if(provider){ onReady(); }
@@ -533,6 +572,7 @@ $("#btnSwap").onclick = async ()=>{
       updateQuote();
       await refreshTvl();
       await refreshLeaderboard();
+      await refreshMySwapPoints();
     }catch(e){}
   }, 10000);
 })();
