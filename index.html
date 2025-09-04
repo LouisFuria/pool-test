@@ -7,7 +7,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <style>
-:root{--bg:#0b0f19;--elev:#0f1524;--card:#11172b;--txt:#e6e9ef;--muted:#94a3b8;--border:#1f2942;--pri:#8b5cf6;--ok:#10b981;--err:#ef4444}
+:root{
+  --bg:#0b0f19;--elev:#0f1524;--card:#11172b;--txt:#e6e9ef;--muted:#94a3b8;--border:#1f2942;
+  --pri:#8b5cf6;--ok:#10b981;--err:#ef4444
+}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--txt);font-family:Inter,system-ui}
 .wrap{max-width:1100px;margin:24px auto 64px;padding:0 16px}
@@ -38,11 +41,14 @@ th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08
 .toast{background:var(--elev);border:1px solid var(--border);padding:10px 12px;border-radius:10px;min-width:240px}
 .ok{border-color:#065f46;background:#065f4628}.err{border-color:#7f1d1d;background:#7f1d1d28}
 
-/* swap header = 3 colonnes avec switch un PEU vers la gauche */
+/* SWAP header : switch un peu vers la gauche */
 .swap-head{display:grid;grid-template-columns:1fr 56px 1fr;gap:10px;align-items:center}
-#switchPair{margin-left:-6px} /* léger décalage à gauche */
-.swap-mid{display:grid;grid-template-columns:1fr;gap:10px}
+#switchPair{margin-left:-6px}
+
 .help{font-size:12px;color:var(--muted)}
+/* Modal Pools ADD */
+#poolModal{display:none;position:fixed;inset:0;background:#0009;z-index:60;align-items:center;justify-content:center}
+#poolModal .box{background:#11172b;border:1px solid var(--border);border-radius:16px;padding:16px;min-width:320px}
 </style>
 </head>
 <body>
@@ -69,30 +75,28 @@ th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08
   <section id="swap">
     <div class="grid g2">
       <div class="card">
-        <div class="card-h">Swap ETH ↔ USDC  ·  règle points: 10 pts / $ swapé</div>
+        <div class="card-h">Swap ETH ↔ USDC · Règle points: 10 pts / $ swapé</div>
         <div class="card-c grid">
           <div class="swap-head">
             <select id="fromTok"><option value="ETH">ETH</option><option value="USDC">USDC</option></select>
             <button class="btn" id="switchPair" title="Switch">⇄</button>
             <select id="toTok"><option value="USDC">USDC</option><option value="ETH">ETH</option></select>
           </div>
-          <div class="swap-mid">
-            <input id="pay" inputmode="decimal" placeholder="You pay…" />
-            <div class="row" style="gap:6px;flex-wrap:wrap">
-              <button class="btn" data-q="25">25%</button>
-              <button class="btn" data-q="50">50%</button>
-              <button class="btn" data-q="75">75%</button>
-              <button class="btn" data-q="100">100%</button>
-            </div>
-            <div class="stat">
-              <div style="flex:1">
-                <div class="muted">You Receive</div>
-                <div class="val" id="receive">—</div>
-              </div>
-              <button id="swapBtn" class="btn pri">Swap</button>
-            </div>
-            <div class="help" id="balances">Solde: —</div>
+          <input id="pay" inputmode="decimal" placeholder="You pay…"/>
+          <div class="row" style="gap:6px;flex-wrap:wrap">
+            <button class="btn" data-q="25">25%</button>
+            <button class="btn" data-q="50">50%</button>
+            <button class="btn" data-q="75">75%</button>
+            <button class="btn" data-q="100">100%</button>
           </div>
+          <div class="stat">
+            <div style="flex:1">
+              <div class="muted">You Receive</div>
+              <div class="val" id="receive">—</div>
+            </div>
+            <button id="swapBtn" class="btn pri">Swap</button>
+          </div>
+          <div class="help" id="balances">Solde: —</div>
         </div>
       </div>
       <div class="card">
@@ -106,7 +110,7 @@ th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08
     </div>
   </section>
 
-  <!-- POOLS (mêmes fonds que le vault) -->
+  <!-- POOLS -->
   <section id="pools" style="display:none">
     <div class="grid g3" style="margin-bottom:16px">
       <div class="stat"><div style="flex:1">TVL (équiv. ETH)</div><div class="val" id="p_tvl">—</div></div>
@@ -118,21 +122,22 @@ th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08
       <div class="card-c">
         <table>
           <thead><tr><th>Pair</th><th>APY</th><th>TVL (ETH)</th><th>Vol(~24h)</th><th>Points règle</th><th></th></tr></thead>
-          <tbody id="p_rows"><tr><td colspan="6" class="muted">Chargement…</td></tr></tbody>
+          <tbody id="p_rows">
+            <tr><td colspan="6" class="muted">Chargement…</td></tr>
+          </tbody>
         </table>
-        <div class="help" style="margin-top:8px">⚠️ Dépôt “Pools” = même contrat que Vault. Utilise l’onglet <b>Vaults</b> pour déposer.</div>
+        <div class="help" style="margin-top:8px">⚠️ Dépôt “Pools” = même contrat que Vault.</div>
       </div>
     </div>
   </section>
 
-  <!-- VAULTS (dépôts réels) -->
+  <!-- VAULTS -->
   <section id="vaults" style="display:none">
     <div class="grid g3" style="margin-bottom:16px">
       <div class="stat"><div style="flex:1">Total ETH (vault)</div><div class="val" id="v_totalEth">—</div></div>
       <div class="stat"><div style="flex:1">Total USDC (vault)</div><div class="val" id="v_totalUsdc">—</div></div>
       <div class="stat"><div style="flex:1">Mes points (vault)</div><div class="val" id="v_myPts">—</div></div>
     </div>
-
     <div class="grid g2">
       <div class="card">
         <div class="card-h" style="font-size:14px">VAULT ETH</div>
@@ -172,7 +177,7 @@ th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08
       <div class="card-c">
         <table>
           <thead><tr><th>#</th><th>Adresse</th><th>Points</th></tr></thead>
-          <tbody id="lbBody"><tr><td colspan="3" class="muted">Chargement…</td></tr></tbody>
+        <tbody id="lbBody"><tr><td colspan="3" class="muted">Chargement…</td></tr></tbody>
         </table>
         <div class="help" style="margin-top:8px">Règle: <b>1 pt / $ / min</b> (lecture on-chain via <code>pointsOf</code>, refresh 10s).</div>
       </div>
@@ -180,19 +185,37 @@ th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08
   </section>
 </div>
 
+<!-- Modal Pools ADD -->
+<div id="poolModal">
+  <div class="box">
+    <div style="font-weight:700;margin-bottom:8px">Déposer dans la pool</div>
+    <div class="row" style="margin-bottom:8px">
+      <select id="poolToken" style="max-width:120px">
+        <option value="ETH">ETH</option>
+        <option value="USDC">USDC</option>
+      </select>
+      <input id="poolAmount" placeholder="Montant (ex: 0.1 ou 200)"/>
+    </div>
+    <div class="row" style="justify-content:flex-end;gap:8px">
+      <button id="poolClose" class="btn">Annuler</button>
+      <button id="poolDo" class="btn pri">Déposer</button>
+    </div>
+    <div class="help" style="margin-top:8px">Pour USDC, un approve sera fait si nécessaire.</div>
+  </div>
+</div>
+
 <div class="toasts" id="toasts"></div>
 
 <script>
 (async () => {
-  // ==== Adresses de tes contrats
+  // ====== ADRESSES
   const USDC   = "0x3F532813FEB32E1990d9c7Ca8Cb29b62C573512B";
   const VAULT  = "0xfC39B74a0c3AD291f88224ec620410c32f3659e4"; // DualTokenVaultWithPoints
   const SWAP   = "0x9965B8ef813E6247c6788AF7836756a579474484"; // FixedPriceSwap
 
-  // ==== ABIs minimales
+  // ====== ABIs
   const ERC20_ABI=[{"type":"function","name":"decimals","stateMutability":"view","inputs":[],"outputs":[{"type":"uint8"}]},{"type":"function","name":"balanceOf","stateMutability":"view","inputs":[{"name":"o","type":"address"}],"outputs":[{"type":"uint256"}]},{"type":"function","name":"allowance","stateMutability":"view","inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"outputs":[{"type":"uint256"}]},{"type":"function","name":"approve","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"type":"bool"}]}];
 
-  // swap
   const SWAP_ABI=[
     {"type":"function","name":"ethUsd","stateMutability":"view","inputs":[],"outputs":[{"type":"uint256"}]},
     {"type":"function","name":"feeBps","stateMutability":"view","inputs":[],"outputs":[{"type":"uint256"}]},
@@ -203,7 +226,6 @@ th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08
     {"type":"event","name":"SwapUSDCForETH","inputs":[{"indexed":true,"name":"user","type":"address"},{"indexed":false,"name":"usdcIn","type":"uint256"},{"indexed":false,"name":"ethOut","type":"uint256"},{"indexed":false,"name":"price8","type":"uint256"},{"indexed":false,"name":"feeBps","type":"uint256"}],"anonymous":false}
   ];
 
-  // vault (pool)
   const VAULT_ABI=[
     {"type":"function","name":"totalETH","stateMutability":"view","inputs":[],"outputs":[{"type":"uint256"}]},
     {"type":"function","name":"totalUSDC","stateMutability":"view","inputs":[],"outputs":[{"type":"uint256"}]},
@@ -216,7 +238,7 @@ th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08
     {"type":"event","name":"WithdrawUSDC","inputs":[{"indexed":true,"name":"user","type":"address"},{"indexed":false,"name":"amount","type":"uint256"}],"anonymous":false}
   ];
 
-  // ==== helpers
+  // ====== Helpers UI
   const $=id=>document.getElementById(id);
   const toastBox=$("toasts");
   function toast(msg,type="ok"){const d=document.createElement("div");d.className=`toast ${type}`;d.textContent=msg;toastBox.appendChild(d);setTimeout(()=>d.remove(),3500)}
@@ -224,7 +246,7 @@ th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08
   function showTab(k){for(const t in tabs)tabs[t].style.display=(t===k)?"block":"none";["tab-swap","tab-pools","tab-vaults","tab-leader"].forEach(id=>$(id).classList.remove("active"));$("tab-"+k).classList.add("active")}
   $("tab-swap").onclick=()=>showTab("swap");$("tab-pools").onclick=()=>showTab("pools");$("tab-vaults").onclick=()=>showTab("vaults");$("tab-leader").onclick=()=>showTab("leader");
 
-  // ==== provider + auto-reconnect
+  // ====== Provider & auto-reconnect
   if(!window.ethereum){toast("Installe MetaMask","err")}
   const provider=new ethers.providers.Web3Provider(window.ethereum,{name:"base-sepolia",chainId:84532});
   let signer=null, me=null, usdcDec=6, cached={price:3000, feeBps:30};
@@ -255,59 +277,61 @@ th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08
   window.ethereum?.on?.("accountsChanged",()=>location.reload());
   window.ethereum?.on?.("chainChanged",()=>location.reload());
 
-  // ==== contrats
+  // ====== Contracts
   const swapRO=new ethers.Contract(SWAP,SWAP_ABI,provider);
   const swapRW=swapRO.connect(provider.getSigner());
   const vaultRO=new ethers.Contract(VAULT,VAULT_ABI,provider);
   const vaultRW=vaultRO.connect(provider.getSigner());
   const usdcRW=usdcRO.connect(provider.getSigner());
 
-  // ==== SWAP UI
+  // ====== SWAP UI
   const fromSel=$("fromTok"), toSel=$("toTok"), payIn=$("pay"), recvEl=$("receive");
-  ["change","input"].forEach(ev=>{fromSel.addEventListener(ev,computeQuote); toSel.addEventListener(ev,computeQuote);});
-  $("switchPair").onclick=()=>{const a=fromSel.value; fromSel.value=toSel.value; toSel.value=a; computeQuote();};
-  payIn.oninput=computeQuote;
+
+  // Quote imméd. locale + recalcul on-chain
+  function immediateQuoteLocal(){
+    const amt = Number((payIn.value||"0").replace(",","."));
+    const price = cached.price || 3000;
+    const feeBps = (typeof cached.feeBps==="number") ? cached.feeBps : 30;
+    if(!amt || !price){ recvEl.textContent="—"; return; }
+    if(fromSel.value==="ETH" && toSel.value==="USDC"){
+      const gross = amt*price; const fee=gross*feeBps/10000;
+      recvEl.textContent = (gross-fe).toLocaleString(undefined,{maximumFractionDigits:2})+" USDC";
+    }else if(fromSel.value==="USDC" && toSel.value==="ETH"){
+      const fee = amt*feeBps/10000; const eth = (amt-fe)/price;
+      recvEl.textContent = eth.toFixed(6)+" ETH";
+    }else recvEl.textContent="—";
+  }
+  ["change","input","keyup"].forEach(ev=>{
+    payIn.addEventListener(ev,()=>{immediateQuoteLocal(); computeQuote();});
+    fromSel.addEventListener(ev,()=>{immediateQuoteLocal(); computeQuote();});
+    toSel.addEventListener(ev,()=>{immediateQuoteLocal(); computeQuote();});
+  });
+  $("switchPair").onclick=()=>{const a=fromSel.value; fromSel.value=toSel.value; toSel.value=a; immediateQuoteLocal(); computeQuote();};
+
   document.querySelectorAll('[data-q]').forEach(b=>b.onclick=async()=>{if(!me){toast("Connecte ton wallet","err");return}
     const pct=Number(b.dataset.q);
     if(fromSel.value==="ETH"){const bal=await provider.getBalance(me); payIn.value=(Number(ethers.utils.formatEther(bal))*pct/100).toString();}
     else{const bal=await usdcRO.balanceOf(me); payIn.value=(Number(ethers.utils.formatUnits(bal,usdcDec))*pct/100).toString();}
-    computeQuote();
+    immediateQuoteLocal(); computeQuote();
   });
 
-  async function readSwapMeta(){
+  async function readPriceAndFees(){
     try{
-      const [p8,f]=await Promise.all([
-        swapRO.ethUsd().catch(()=>ethers.BigNumber.from(String(cached.price*1e8))),
-        swapRO.feeBps().catch(()=>cached.feeBps)
-      ]);
-      const price=Number(ethers.utils.formatUnits(p8,8))||cached.price||3000;
-      const feeBps=Number(f); cached.price=price; cached.feeBps=feeBps;
-
-      // TVL vient du VAULT (conversion en ETH)
-      const [tEth,tUsdc]=await Promise.all([vaultRO.totalETH().catch(()=>ethers.constants.Zero),vaultRO.totalUSDC().catch(()=>ethers.constants.Zero)]);
-      const tvlEth=Number(ethers.utils.formatEther(tEth)) + (price? Number(ethers.utils.formatUnits(tUsdc,6))/price : 0);
-
-      $("s_price").textContent="$"+price.toLocaleString();
-      $("s_fees").textContent=(feeBps/100).toFixed(2)+"%";
-      $("s_tvl").textContent=tvlEth.toFixed(4)+" ETH";
-      return {price,feeBps,tvlEth};
-    }catch(e){return {price:cached.price,feeBps:cached.feeBps,tvlEth:0}}
+      const [p8,f]=await Promise.all([swapRO.ethUsd().catch(null),swapRO.feeBps().catch(null)]);
+      if(p8){cached.price=Number(ethers.utils.formatUnits(p8,8))||cached.price}
+      if(f!=null){cached.feeBps=Number(f)}
+      $("s_price").textContent="$"+cached.price.toLocaleString();
+      $("s_fees").textContent=(cached.feeBps/100).toFixed(2)+"%";
+    }catch{}
   }
-
   async function computeQuote(){
-    const {price,feeBps}=await readSwapMeta();
-    const amt=Number((payIn.value||"0").trim());
-    if(!amt||!price){recvEl.textContent="—";return}
-    if(fromSel.value==="ETH"&&toSel.value==="USDC"){
-      const gross=amt*price; const fee=gross*feeBps/10000; recvEl.textContent=(gross-fe).toLocaleString(undefined,{maximumFractionDigits:2})+" USDC";
-    }else if(fromSel.value==="USDC"&&toSel.value==="ETH"){
-      const fee=amt*feeBps/10000; const net=amt-fe; const eth=net/price; recvEl.textContent=eth.toFixed(6)+" ETH";
-    }else recvEl.textContent="—";
-
-    if(me){
-      const [ethB,usdcB]=await Promise.all([provider.getBalance(me),usdcRO.balanceOf(me)]);
-      $("balances").textContent=`Solde: ${Number(ethers.utils.formatEther(ethB)).toFixed(4)} ETH · ${Number(ethers.utils.formatUnits(usdcB,usdcDec)).toFixed(2)} USDC`;
-    }
+    await readPriceAndFees(); // met à jour l’affichage
+    try{
+      if(me){
+        const [ethB,usdcB]=await Promise.all([provider.getBalance(me),usdcRO.balanceOf(me)]);
+        $("balances").textContent=`Solde: ${Number(ethers.utils.formatEther(ethB)).toFixed(4)} ETH · ${Number(ethers.utils.formatUnits(usdcB,usdcDec)).toFixed(2)} USDC`;
+      }
+    }catch{}
   }
 
   $("swapBtn").onclick=async()=>{
@@ -315,28 +339,37 @@ th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08
     const amtStr=(payIn.value||"0").trim(); const amt=Number(amtStr); if(!amt) return;
     try{
       if(fromSel.value==="ETH"&&toSel.value==="USDC"){
-        const tx=await swapRW.swapETHForUSDC({value:ethers.utils.parseEther(amtStr)}); await tx.wait(); toast("✅ Swap ETH→USDC confirmé")
+        const tx=await swapRW.swapETHForUSDC({value:ethers.utils.parseEther(amtStr)}); await tx.wait(); toast("✅ Swap ETH→USDC confirmé");
       }else{
         const amount=ethers.utils.parseUnits(amtStr,usdcDec);
         const allowance=await usdcRO.allowance(me,SWAP);
         if(allowance.lt(amount)){const a=await usdcRW.approve(SWAP,amount);await a.wait()}
-        const tx=await swapRW.swapUSDCForETH(amount); await tx.wait(); toast("✅ Swap USDC→ETH confirmé")
+        const tx=await swapRW.swapUSDCForETH(amount); await tx.wait(); toast("✅ Swap USDC→ETH confirmé");
       }
       payIn.value=""; recvEl.textContent="—";
-      await Promise.all([refreshPools(), refreshVaults(), readSwapMeta()]);
+      await Promise.all([refreshPools(), refreshVaults(), refreshLeaderboard(), readSwapMeta()]);
     }catch(e){console.error(e);toast("❌ Échec du swap","err")}
   };
 
-  // ==== Pools (TVL du vault en ETH, volume 24h des swaps, mes points swap)
+  // ====== TVL (ETH only) depuis le VAULT
+  async function readSwapMeta(){
+    try{
+      const p8=await swapRO.ethUsd().catch(null);
+      const price= p8 ? Number(ethers.utils.formatUnits(p8,8)) : (cached.price||3000);
+      const [tEth,tUsdc]=await Promise.all([vaultRO.totalETH().catch(()=>ethers.constants.Zero),vaultRO.totalUSDC().catch(()=>ethers.constants.Zero)]);
+      const tvlEth=Number(ethers.utils.formatEther(tEth)) + (price ? Number(ethers.utils.formatUnits(tUsdc,6))/price : 0);
+      $("s_tvl").textContent=tvlEth.toFixed(4)+" ETH";
+      return {price,tvlEth};
+    }catch(e){return {price:cached.price||3000,tvlEth:0}}
+  }
+
+  // ====== Pools (TVL ETH, Volume ~24h, mes points swap)
   async function refreshPools(){
     try{
-      const p8=await swapRO.ethUsd().catch(()=>ethers.BigNumber.from(String(cached.price*1e8)));
-      const price=Number(ethers.utils.formatUnits(p8,8))||cached.price||3000; cached.price=price;
-
+      const {price}=await readSwapMeta();
       const [tEth,tUsdc]=await Promise.all([vaultRO.totalETH(),vaultRO.totalUSDC()]);
       const tvlEth=Number(ethers.utils.formatEther(tEth)) + (price? Number(ethers.utils.formatUnits(tUsdc,6))/price : 0);
 
-      // volume via swaps ~24h
       const current=await provider.getBlockNumber();
       const fromBlock=Math.max(0,current-45000);
       const t1=ethers.utils.id("SwapETHForUSDC(address,uint256,uint256,uint256,uint256)");
@@ -352,7 +385,7 @@ th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08
         else usd=Number(ethers.utils.formatUnits(ev.args.usdcIn,6));
         volUsd+=usd;
         const addr=("0x"+l.topics[1].slice(26)).toLowerCase();
-        if(me && addr===me.toLowerCase()) myPts += usd*10; // règle swap
+        if(me && addr===me.toLowerCase()) myPts += usd*10;
       }
 
       $("p_tvl").textContent   = tvlEth.toFixed(4)+" ETH";
@@ -366,12 +399,12 @@ th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08
           <td>${tvlEth.toFixed(4)} ETH</td>
           <td>$${volUsd.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
           <td>1 pt / $ / min</td>
-          <td><button class="btn pri" disabled>ADD</button></td>
+          <td><button class="btn pri" id="addPoolBtn">ADD</button></td>
         </tr>`;
     }catch(e){console.error(e)}
   }
 
-  // ==== Vaults (totaux + mes points + DEPOTS)
+  // ====== Vaults (totaux + points + dépôts)
   async function refreshVaults(){
     try{
       const [tEth,tUsdc]=await Promise.all([vaultRO.totalETH(),vaultRO.totalUSDC()]);
@@ -385,7 +418,6 @@ th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08
     }catch(e){console.error(e)}
   }
 
-  // Dépôts
   $("depEth").onclick=async()=>{
     if(!me) return toast("Connecte ton wallet","err");
     const s=$("ethAmt").value.trim(); if(!s) return;
@@ -396,7 +428,6 @@ th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08
       await Promise.all([refreshVaults(), refreshPools(), readSwapMeta(), refreshLeaderboard()]);
     }catch(e){console.error(e);toast("❌ Dépôt ETH échoué","err")}
   };
-
   $("approveUsdc").onclick=async()=>{
     if(!me) return toast("Connecte ton wallet","err");
     const s=$("usdcAmt").value.trim(); if(!s) return;
@@ -419,12 +450,36 @@ th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08
     }catch(e){console.error(e);toast("❌ Dépôt USDC échoué","err")}
   };
 
-  // ==== Leaderboard (events vault + pointsOf)
+  // ====== Pools → ADD (dépose sur le vault)
+  document.addEventListener("click",(e)=>{
+    if(e.target && e.target.id==="addPoolBtn"){ $("poolModal").style.display="flex"; }
+  });
+  $("poolClose").onclick=()=>{ $("poolModal").style.display="none"; };
+  $("poolDo").onclick=async()=>{
+    if(!me){ toast("Connecte ton wallet","err"); return; }
+    const tok=$("poolToken").value; const amtStr=$("poolAmount").value.trim();
+    if(!amtStr){ toast("Indique un montant","err"); return; }
+    try{
+      if(tok==="ETH"){
+        const tx=await vaultRW.depositETH({value:ethers.utils.parseEther(amtStr)});
+        await tx.wait(); toast("✅ Dépôt ETH confirmé");
+      }else{
+        const amount=ethers.utils.parseUnits(amtStr,usdcDec);
+        const allowance=await usdcRO.allowance(me,VAULT);
+        if(allowance.lt(amount)){ const a=await usdcRW.approve(VAULT,amount); await a.wait(); }
+        const tx=await vaultRW.depositUSDC(amount); await tx.wait(); toast("✅ Dépôt USDC confirmé");
+      }
+      $("poolModal").style.display="none"; $("poolAmount").value="";
+      await Promise.all([refreshVaults(), refreshPools(), readSwapMeta(), refreshLeaderboard()]);
+    }catch(e){ console.error(e); toast("❌ Dépôt échoué","err"); }
+  };
+
+  // ====== Leaderboard (scan + fallback)
   const participants=new Set();
   async function bootstrapParticipants(){
     try{
       const current=await provider.getBlockNumber();
-      const fromBlock=Math.max(0,current-1_000_000);
+      const fromBlock=Math.max(0,current-2_000_000);
       const topics=[
         ethers.utils.id("DepositETH(address,uint256)"),
         ethers.utils.id("DepositUSDC(address,uint256)"),
@@ -435,21 +490,22 @@ th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08
         const logs=await provider.getLogs({fromBlock,toBlock:current,address:VAULT,topics:[t]}).catch(()=>[]);
         for(const l of logs) participants.add("0x"+l.topics[1].slice(26));
       }
-      if(me) participants.add(me);
     }catch(e){console.error(e)}
+    if(me) participants.add(me);
   }
   async function refreshLeaderboard(){
     if(me) participants.add(me);
-    const body=$("lbBody"); body.innerHTML="";
+    const body=$("lbBody");
     const addrs=Array.from(participants);
     if(!addrs.length){ body.innerHTML='<tr><td colspan="3" class="muted">Aucun participant détecté pour l’instant.</td></tr>'; return }
+    body.innerHTML="";
     const rows=[];
     for(const a of addrs){
       try{
         const res=await vaultRO.pointsOf(a);
         const pts=Number(ethers.utils.formatUnits(res.points||res[0]||"0",(res.decimals_||res[1]||6)));
         rows.push({a,pts});
-      }catch{}
+      }catch{ rows.push({a,pts:0}); }
     }
     rows.sort((x,y)=>y.pts-x.pts);
     rows.forEach((r,i)=>{
@@ -462,19 +518,20 @@ th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08
     });
   }
 
-  // ==== global refresh + timers
+  // ====== Global refresh + timers
   async function refreshAll(){
-    await Promise.all([readSwapMeta(), computeQuote(), refreshPools(), refreshVaults(), bootstrapParticipants(), refreshLeaderboard()]);
+    await Promise.all([readPriceAndFees(), readSwapMeta(), computeQuote(), refreshPools(), refreshVaults(), bootstrapParticipants(), refreshLeaderboard()]);
   }
   setInterval(refreshPools,10000);
   setInterval(refreshVaults,10000);
   setInterval(refreshLeaderboard,10000);
-  setInterval(readSwapMeta,15000);
+  setInterval(()=>{readPriceAndFees();readSwapMeta();},15000);
 
-  // Réseau display (même sans connect)
+  // Réseau display même sans connexion
   const net=await provider.getNetwork().catch(()=>null);
   if(net) $("net").textContent=`Réseau: ${Number(net.chainId)===84532?"Base Sepolia ✅":net.name+"("+net.chainId+")"}`;
 })();
 </script>
 </body>
 </html>
+
