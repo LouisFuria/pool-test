@@ -7,7 +7,9 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <style>
-  :root{--bg:#0c0f16;--panel:#121725;--muted:#7f8aa3;--text:#e7ecf7;--primary:#7a57ff;--ok:#22c55e;--err:#ef4444;--soft:#141a2a;--line:#1b2235}
+  :root{
+    --bg:#0c0f16;--panel:#121725;--muted:#7f8aa3;--text:#e7ecf7;--primary:#7a57ff;--line:#1b2235;--soft:#141a2a;
+  }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
   a{color:inherit;text-decoration:none}
@@ -17,25 +19,24 @@
   .crumb{color:var(--muted);font-size:14px}
   .right{margin-left:auto;display:flex;gap:10px;align-items:center}
   .chip{background:#0f1628;padding:8px 12px;border-radius:999px;color:#cbd5e1;border:1px solid var(--line);font-size:13px}
-  .btn{background:var(--primary);color:#fff;padding:10px 16px;border:none;border-radius:12px;font-weight:700;cursor:pointer}
+  .btn{background:var(--primary);color:white;padding:10px 16px;border-radius:12px;border:none;cursor:pointer;font-weight:700}
   .btn.secondary{background:#1b2235;color:#e2e8f0}
   .btn.ghost{background:transparent;border:1px solid var(--line);color:#cbd5e1}
   .tabs{display:flex;gap:10px;margin:16px 0}
   .tab{padding:10px 16px;border-radius:12px;background:var(--soft);cursor:pointer;color:#a5b0cf;border:1px solid var(--line)}
-  .tab.active{background:var(--panel);color:#fff;box-shadow:0 0 0 1px #1f2840 inset}
+  .tab.active{color:#fff;background:var(--panel);box-shadow:0 0 0 1px #1f2840 inset}
   .grid{display:grid;gap:16px}
-  @media(min-width:980px){.grid-2{grid-template-columns:1.15fr .85fr}}
+  @media (min-width:980px){.grid-2{grid-template-columns:1.15fr .85fr}}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
   .h{font-size:14px;letter-spacing:.12em;color:#9fb0d6;text-transform:uppercase;margin-bottom:12px}
   .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-  .input,select{width:100%;padding:14px 14px;border-radius:12px;background:#0f1422;color:#e5edff;border:1px solid var(--line);font-size:16px;outline:none}
-  select{appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 20 20" fill="%23a6b2d6"><path d="M5.5 7.5l4.5 5 4.5-5"/></svg>');background-repeat:no-repeat;background-position:right 10px center;padding-right:36px}
+  .input, select{width:100%;padding:14px 14px;border-radius:12px;background:#0f1422;color:#e5edff;border:1px solid var(--line);font-size:16px;outline:none}
+  select {appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 20 20" fill="%23a6b2d6"><path d="M5.5 7.5l4.5 5 4.5-5"/></svg>');background-repeat:no-repeat;background-position:right 10px center;padding-right:36px}
   .pill{padding:8px 12px;border-radius:999px;background:#0f1422;border:1px solid var(--line);color:#c9d5f2;cursor:pointer}
   .stat{background:#0e1320;border:1px solid var(--line);border-radius:16px;padding:16px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
   .muted{color:var(--muted)}
   .big{font-size:28px}
   .swap-ctrls{display:grid;grid-template-columns:1fr 58px 1fr;gap:10px}
-  .swap-arrows{display:flex;align-items:center;justify-content:center}
   .table{width:100%;border-collapse:collapse}
   .table th,.table td{padding:14px;border-bottom:1px solid var(--line);text-align:left}
   .note{color:#a7b3d5;font-size:13px;margin-top:8px}
@@ -78,8 +79,8 @@
         <select id="swapTo"><option value="USDC">USDC</option><option value="ETH">ETH</option></select>
       </div>
       <div class="two" style="margin-top:10px">
-        <input id="swapAmount" class="input" placeholder="Montant" inputmode="decimal" />
-        <input id="slippage" class="input" placeholder="Slippage % (affichage)" value="0.5" />
+        <input id="swapAmount" class="input" placeholder="Montant" inputmode="decimal"/>
+        <input id="slippage" class="input" placeholder="Slippage % (affichage)" value="0.5"/>
       </div>
       <div class="row" style="margin-top:10px">
         <button class="pill pct" data-p="25">25%</button>
@@ -105,6 +106,7 @@
         </div>
       </div>
     </div>
+
     <div class="card">
       <div class="h">Infos (Swap)</div>
       <div class="stat"><span>Prix ETH/USD</span><span id="priceBox" class="big">$—</span></div>
@@ -124,7 +126,9 @@
     <div class="card" style="margin-top:14px">
       <div class="h">Pools (points: <b>1 pt / $ / min</b>)</div>
       <table class="table">
-        <thead><tr><th>Pair</th><th>APY</th><th>TVL (ETH)</th><th>Vol(~24h)</th><th>Points règle</th><th></th></tr></thead>
+        <thead><tr>
+          <th>Pair</th><th>APY</th><th>TVL (ETH)</th><th>Vol(~24h)</th><th>Points règle</th><th></th>
+        </tr></thead>
         <tbody id="poolRows"></tbody>
       </table>
       <div class="note">⚠️ Le dépôt “Pools” utilise le <b>même</b> contrat que le Vault. Ici, l’ADD réalise automatiquement un dépôt <b>50/50</b> (en $) dans le vault.</div>
@@ -196,7 +200,7 @@
       <div class="row" style="margin-top:10px;justify-content:flex-end">
         <button id="btnSaveCfg" class="btn">Sauver</button>
       </div>
-      <div class="note">Ces paramètres sont stockés localement dans votre navigateur.</div>
+      <div class="note">Ces paramètres sont stockés localement.</div>
     </div>
   </section>
 </div>
@@ -241,11 +245,17 @@
 <div id="toast" class="toast" style="display:none"></div>
 
 <script>
-// surface les erreurs JS au lieu de casser l'app
-window.addEventListener('error', (e)=>{ try{ const msg=(e?.error?.message||e?.message||'Erreur').slice(0,280); const t=document.querySelector('#toast'); if(t){t.textContent=msg;t.style.display='block'; setTimeout(()=>t.style.display='none',2600);} }catch{} });
+/* --- Surface les erreurs JS dans un toast au lieu de casser toute l'app --- */
+window.addEventListener('error', (e)=>{
+  try{
+    const msg=(e && (e.error && e.error.message || e.message)) || 'Erreur script';
+    const t=document.querySelector('#toast');
+    if(t){ t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',2600); }
+  }catch{}
+});
 
 (async function(){
-  // ========= CONFIG
+  /* ========= CONFIG ========= */
   const CHAIN_ID_DEC = 84532;             // Base Sepolia
   const CHAIN_ID_HEX = '0x14A54';
   const SWAP_ADDRESS  = '0x9965B8ef813E6247c6788AF7836756a579474484'; // FixedPriceSwap
@@ -254,7 +264,7 @@ window.addEventListener('error', (e)=>{ try{ const msg=(e?.error?.message||e?.me
   const APY_POOL = 20;   // affichage
   const APY_VAULT = 25;  // affichage
 
-  // ========= ABIs
+  /* ========= ABIs ========= */
   const ERC20_ABI = [
     "function decimals() view returns (uint8)",
     "function balanceOf(address) view returns (uint256)",
@@ -262,17 +272,15 @@ window.addEventListener('error', (e)=>{ try{ const msg=(e?.error?.message||e?.me
     "function approve(address spender, uint256 amount) returns (bool)",
     "function transfer(address to, uint256 amount) returns (bool)"
   ];
-
   const SWAP_ABI = [
     "function ethUsd() view returns (uint256)",   // 8 déc
-    "function feeBps() view returns (uint256)",   // e.g. 30
+    "function feeBps() view returns (uint256)",   // ex: 30
     "function USDC() view returns (address)",
     "function swapETHforUSDC() payable",
     "function swapUSDCforETH(uint256 usdcIn)",
     "event SwapETHforUSDC(address indexed user, uint256 ethIn, uint256 usdcOut, uint256 price8, uint256 feeBps)",
     "event SwapUSDCforETH(address indexed user, uint256 usdcIn, uint256 ethOut, uint256 price8, uint256 feeBps)"
   ];
-
   const VAULT_ABI = [
     "function totalETH() view returns (uint256)",
     "function totalUSDC() view returns (uint256)",
@@ -287,30 +295,29 @@ window.addEventListener('error', (e)=>{ try{ const msg=(e?.error?.message||e?.me
     "event WithdrawUSDC(address indexed user, uint256 amount)"
   ];
 
-  // ========= Ethers & state
-  let provider, signer, me, price8=0n, feeBps=0n, usdcDecimals=6;
+  /* ========= State & helpers ========= */
+  let provider, signer, me, price8 = 0, feeBps = 0, usdcDecimals = 6;
   let swap, vault, usdc;
 
-  // ========= Helpers
-  const $ = s=>document.querySelector(s);
-  const $$ = s=>Array.from(document.querySelectorAll(s));
-  function toast(t){ const el=$('#toast'); el.textContent=t; el.style.display='block'; clearTimeout(toast._t); toast._t=setTimeout(()=>el.style.display='none',2600); }
-  const fmt = (n, d=6)=> Number(n).toLocaleString(undefined,{maximumFractionDigits:d});
+  const $ = s => document.querySelector(s);
+  const $$ = s => Array.from(document.querySelectorAll(s));
+  function toast(t){ const el=$("#toast"); el.textContent=t; el.style.display='block'; clearTimeout(toast._t); toast._t=setTimeout(()=>el.style.display='none',2600); }
+  const fmt = (n,d=6)=> Number(n).toLocaleString(undefined,{maximumFractionDigits:d});
   const fmtUsd = (n)=> '$'+Number(n).toLocaleString(undefined,{maximumFractionDigits:2});
-  const price = ()=> Number(price8)/1e8;
-  const applyFee = (x)=> x*(1-Number(feeBps)/10000);
-  const usdToEth = (usd)=> usd/price();
-  const ethToUsd = (eth)=> eth*price();
-  const labelChain = (id)=> id===8453?'Base':(id===84532?'Base Sepolia':`chain ${id}`);
+  const labelChain = id => id===8453?'Base':(id===84532?'Base Sepolia':`chain ${id}`);
   const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
-  const load=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k)); return (v==null?d:v);}catch{return d}};
+  const load=(k,d)=>{ try{ const v=JSON.parse(localStorage.getItem(k)); return (v==null?d:v); }catch{return d} };
+  const price = ()=> price8/1e8;
+  const applyFee = x => x * (1 - feeBps/10000);
+  const usdToEth = usd => (price() ? usd / price() : 0);
+  const ethToUsd = eth => eth * price();
 
-  // ========= Wallet
+  /* ========= Wallet ========= */
   async function ensureProvider(){
     if(!window.ethereum){ toast('Installe MetaMask.'); throw new Error('no wallet'); }
     provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
     const net = await provider.getNetwork();
-    $('#netChip').textContent = `Réseau: ${labelChain(net.chainId)}`;
+    $("#netChip").textContent = `Réseau: ${labelChain(net.chainId)}`;
     return provider;
   }
   async function connect(){
@@ -319,129 +326,510 @@ window.addEventListener('error', (e)=>{ try{ const msg=(e?.error?.message||e?.me
       const accs = await window.ethereum.request({ method:'eth_requestAccounts' });
       me = accs[0]; signer = provider.getSigner();
       let net = await provider.getNetwork();
-      if(net.chainId!==CHAIN_ID_DEC){
+      if(net.chainId !== CHAIN_ID_DEC){
         try{
           await window.ethereum.request({ method:'wallet_switchEthereumChain', params:[{ chainId: CHAIN_ID_HEX }] });
         }catch(e){
-          // si réseau absent → addEthereumChain
-          if(e?.code===4902 || /unrecognized|not added/i.test(e?.message||'')){
-            await window.ethereum.request({ method:'wallet_addEthereumChain', params:[{ chainId: CHAIN_ID_HEX, chainName:'Base Sepolia', nativeCurrency:{ name:'ETH', symbol:'ETH', decimals:18 }, rpcUrls:['https://sepolia.base.org'], blockExplorerUrls:['https://base-sepolia.blockscout.com'] }] });
-          } else { throw e; }
+          if(e && (e.code===4902 || /unrecognized|not added/i.test(e.message||''))){
+            await window.ethereum.request({
+              method:'wallet_addEthereumChain',
+              params:[{ chainId: CHAIN_ID_HEX, chainName:'Base Sepolia',
+                nativeCurrency:{ name:'ETH', symbol:'ETH', decimals:18 },
+                rpcUrls:['https://sepolia.base.org'],
+                blockExplorerUrls:['https://base-sepolia.blockscout.com'] }]
+            });
+          }else{ throw e; }
         }
         net = await provider.getNetwork();
       }
-      $('#netChip').textContent = `Réseau: ${labelChain(net.chainId)}`;
+      $("#netChip").textContent = `Réseau: ${labelChain(net.chainId)}`;
       save('furia_connected', true);
       afterConnectUI();
       await onReady();
-    }catch(err){ console.error(err); toast(err?.message||'Connexion impossible'); }
-  });
-    me = accs[0]; signer = provider.getSigner();
-    const net = await provider.getNetwork();
-    if(net.chainId!==CHAIN_ID_DEC){
-      await window.ethereum.request({ method:'wallet_switchEthereumChain', params:[{ chainId: CHAIN_ID_HEX }] });
-      const net2 = await provider.getNetwork();
-      $('#netChip').textContent = `Réseau: ${labelChain(net2.chainId)}`;
-    }
-    afterConnectUI();
-    await onReady();
+    }catch(err){ console.error(err); toast(err && err.message || 'Connexion impossible'); }
   }
-  function afterConnectUI(){ if(!me) return; $('#btnConnect').style.display='none'; $('#btnDisconnect').style.display='inline-block'; $('#addrChip').style.display='inline-block'; $('#addrChip').textContent=me.slice(0,6)+'…'+me.slice(-4); $('#addrChip').onclick=async()=>{await navigator.clipboard.writeText(me); toast('Adresse copiée');}; }
-  function disconnect(){ me=undefined; signer=undefined; save('furia_connected',false); $('#btnConnect').style.display='inline-block'; $('#btnDisconnect').style.display='none'; $('#addrChip').style.display='none'; }
-  $('#btnConnect').onclick = connect; $('#btnDisconnect').onclick = disconnect;
-  $('#btnImportUSDC').onclick = async ()=>{ try{ await window.ethereum?.request?.({ method:'wallet_watchAsset', params:{ type:'ERC20', options:{ address:USDC_ADDRESS, symbol:'USDC', decimals: usdcDecimals } } }); }catch{ toast('Import token non supporté'); } };
+  function afterConnectUI(){
+    if(!me) return;
+    $("#btnConnect").style.display='none';
+    $("#btnDisconnect").style.display='inline-block';
+    $("#addrChip").style.display='inline-block';
+    $("#addrChip").textContent = me.slice(0,6)+'…'+me.slice(-4);
+    $("#addrChip").onclick = async()=>{ try{ await navigator.clipboard.writeText(me); toast('Adresse copiée'); }catch{} };
+  }
+  function disconnect(){
+    me=undefined; signer=undefined; save('furia_connected',false);
+    $("#btnConnect").style.display='inline-block';
+    $("#btnDisconnect").style.display='none';
+    $("#addrChip").style.display='none';
+  }
+  $("#btnConnect").onclick = connect;
+  $("#btnDisconnect").onclick = disconnect;
+
+  $("#btnImportUSDC").onclick = async ()=>{
+    if(!window.ethereum || !window.ethereum.request){ toast('Wallet non disponible'); return; }
+    try{
+      await window.ethereum.request({
+        method:'wallet_watchAsset',
+        params:{ type:'ERC20', options:{ address:USDC_ADDRESS, symbol:'USDC', decimals: usdcDecimals } }
+      });
+    }catch(e){ toast('Import token non supporté'); }
+  };
 
   if(load('furia_connected',false)){
-    ensureProvider().then(async()=>{ const accs=await provider.listAccounts(); if(accs[0]){ me=accs[0]; signer=provider.getSigner(); afterConnectUI(); onReady(); } }).catch(()=>{});
-  } }).catch(()=>{}); }
-  window.ethereum?.on?.('accountsChanged', (a)=>{ if(a && a[0]){ me=a[0]; signer=provider.getSigner(); afterConnectUI(); onReady(); } else { disconnect(); }});
-  window.ethereum?.on?.('chainChanged', ()=>window.location.reload());
+    ensureProvider().then(async()=>{
+      const accs = await provider.listAccounts();
+      if(accs[0]){ me=accs[0]; signer=provider.getSigner(); afterConnectUI(); onReady(); }
+    }).catch(()=>{});
+  }
+  if(window.ethereum && window.ethereum.on){
+    window.ethereum.on('accountsChanged', (a)=>{
+      if(a && a[0]){ me=a[0]; signer=provider.getSigner(); afterConnectUI(); onReady(); }
+      else{ disconnect(); }
+    });
+    window.ethereum.on('chainChanged', ()=>window.location.reload());
+  }
 
-  // ========= Contracts
+  /* ========= Contracts ========= */
   async function initContracts(){
     const base = signer ?? provider;
     swap = new ethers.Contract(SWAP_ADDRESS, SWAP_ABI, base);
-    vault= new ethers.Contract(VAULT_ADDRESS,VAULT_ABI, base);
+    vault= new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, base);
     usdc = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, base);
-    try{ usdcDecimals = await usdc.decimals(); }catch{ usdcDecimals=6; }
-    try{ price8 = await swap.ethUsd(); }catch{ price8 = 0n; }
-    try{ feeBps = await swap.feeBps(); }catch{ feeBps = 0n; }
-    $('#priceBox').textContent='$'+(Number(price8)/1e8||0).toLocaleString();
-    $('#feeBox').textContent=(Number(feeBps)/100).toFixed(2)+'%';
+    try{ usdcDecimals = await usdc.decimals(); }catch{ usdcDecimals = 6; }
+    try{ price8 = Number(await swap.ethUsd()); }catch{ price8 = 0; }
+    try{ feeBps = Number(await swap.feeBps()); }catch{ feeBps = 0; }
+    $("#priceBox").textContent = '$'+(price8/1e8).toLocaleString();
+    $("#feeBox").textContent   = (feeBps/100).toFixed(2)+'%';
   }
 
-  // ========= UI logic
-  function currentSlippage(){ const v=parseFloat($('#slippage').value||load('cfg_slippage','0.5')); return isFinite(v)&&v>=0?v:0.5; }
-  async function updateAllowanceBox(){ try{ if(!me){ $('#allowBox').textContent='Allowance USDC → Swap: —'; return;} const a=await usdc.allowance(me,SWAP_ADDRESS); $('#allowBox').textContent=`Allowance USDC → Swap: ${fmt(Number(a)/10**usdcDecimals)}`; }catch{} }
-  function updateQuote(){ const from=$('#swapFrom').value, to=$('#swapTo').value; const amt=parseFloat($('#swapAmount').value); if(!isFinite(amt)||amt<=0){ $('#youReceive').textContent='—'; $('#minOutBox').textContent='Min. reçu (slippage): —'; return; } let out=0; if(from==='ETH'&&to==='USDC'){ out=applyFee(amt*price()); $('#youReceive').textContent=fmt(out,4)+' USDC'; } else if(from==='USDC'&&to==='ETH'){ out=applyFee(amt/price()); $('#youReceive').textContent=fmt(out,6)+' ETH'; } const minOut= out*(1-currentSlippage()/100); $('#minOutBox').textContent=`Min. reçu (slippage ${currentSlippage()}%): ${fmt(minOut)} ${to}`; }
-  $('#swapAmount').oninput=updateQuote; $('#slippage').oninput=updateQuote; $('#swapFrom').onchange=()=>{ if($('#swapFrom').value===$('#swapTo').value){ $('#swapTo').value=$('#swapFrom').value==='ETH'?'USDC':'ETH'; } updateQuote();}; $('#swapTo').onchange=updateQuote; $('#btnFlip').onclick=()=>{ const a=$('#swapFrom').value; $('#swapFrom').value=$('#swapTo').value; $('#swapTo').value=a; updateQuote(); };
-  $$('.pct').forEach(b=>b.onclick=async()=>{ if(!me){ toast('Connecte ton wallet'); return;} const from=$('#swapFrom').value; if(from==='ETH'){ const bal=await provider.getBalance(me); const val=Number(ethers.utils.formatEther(bal))*(Number(b.dataset.p)/100); $('#swapAmount').value=(Math.max(0,val-0.0002)).toFixed(6); } else { const bal=await usdc.balanceOf(me); const val=(Number(bal)/10**usdcDecimals)*(Number(b.dataset.p)/100); $('#swapAmount').value=val.toFixed(2);} updateQuote(); });
+  /* ========= UI logic ========= */
+  function currentSlippage(){ const v=parseFloat($("#slippage").value || load('cfg_slippage','0.5')); return isFinite(v)&&v>=0?v:0.5; }
+  async function updateAllowanceBox(){
+    try{
+      if(!me){ $("#allowBox").textContent='Allowance USDC → Swap: —'; return; }
+      const a = await usdc.allowance(me, SWAP_ADDRESS);
+      $("#allowBox").textContent = `Allowance USDC → Swap: ${fmt(Number(a)/10**usdcDecimals)}`;
+    }catch{}
+  }
+  function updateQuote(){
+    const from=$("#swapFrom").value, to=$("#swapTo").value;
+    const amt=parseFloat($("#swapAmount").value);
+    if(!isFinite(amt) || amt<=0 || !price()){
+      $("#youReceive").textContent='—';
+      $("#minOutBox").textContent='Min. reçu (slippage): —';
+      return;
+    }
+    let out=0;
+    if(from==='ETH' && to==='USDC'){ out = applyFee(amt*price()); $("#youReceive").textContent = fmt(out,4)+' USDC'; }
+    else if(from==='USDC' && to==='ETH'){ out = applyFee(amt/price()); $("#youReceive").textContent = fmt(out,6)+' ETH'; }
+    const minOut = out * (1 - currentSlippage()/100);
+    $("#minOutBox").textContent = `Min. reçu (slippage ${currentSlippage()}%): ${fmt(minOut)} ${to}`;
+  }
+  $("#swapAmount").oninput = updateQuote;
+  $("#slippage").oninput = updateQuote;
+  $("#swapFrom").onchange = ()=>{
+    if($("#swapFrom").value===$("#swapTo").value){
+      $("#swapTo").value = $("#swapFrom").value==='ETH'?'USDC':'ETH';
+    }
+    updateQuote();
+  };
+  $("#swapTo").onchange   = updateQuote;
+  $("#btnFlip").onclick   = ()=>{ const a=$("#swapFrom").value; $("#swapFrom").value=$("#swapTo").value; $("#swapTo").value=a; updateQuote(); };
+  $$(".pct").forEach(b=>b.onclick=async()=>{
+    if(!me){ toast('Connecte ton wallet'); return;}
+    const from = $("#swapFrom").value;
+    if(from==='ETH'){
+      const bal = await provider.getBalance(me);
+      const val = Number(ethers.utils.formatEther(bal)) * (Number(b.dataset.p)/100);
+      $("#swapAmount").value = (Math.max(0,val-0.0002)).toFixed(6);
+    }else{
+      const bal = await usdc.balanceOf(me);
+      const val = (Number(bal)/10**usdcDecimals) * (Number(b.dataset.p)/100);
+      $("#swapAmount").value = val.toFixed(2);
+    }
+    updateQuote();
+  });
+  document.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ const a=document.activeElement; if(a && (a.id==='swapAmount' || a.id==='slippage')) $("#btnSwap").click(); }});
 
-  async function refreshBalances(){ if(!provider) return; const addr= me || (await (signer??provider).listAccounts())[0]; if(!addr){ $('#balances').textContent='Solde: —'; return;} const ethBal = await provider.getBalance(addr); const usdcBal = await usdc.balanceOf(addr); $('#balances').textContent=`Solde: ${fmt(ethers.utils.formatEther(ethBal))} ETH · ${fmt(Number(usdcBal)/10**usdcDecimals)} USDC`; }
+  async function refreshBalances(){
+    if(!provider) return;
+    const p = signer ?? provider;
+    const addr = me || (await p.listAccounts())[0];
+    if(!addr){ $("#balances").textContent='Solde: —'; return; }
+    const ethBal = await provider.getBalance(addr);
+    const usdcBal= await usdc.balanceOf(addr);
+    $("#balances").textContent = `Solde: ${fmt(ethers.utils.formatEther(ethBal))} ETH · ${fmt(Number(usdcBal)/10**usdcDecimals)} USDC`;
+  }
+  async function refreshTvl(){
+    const tEth  = Number(ethers.utils.formatEther(await vault.totalETH()));
+    const tUsdc = Number((await vault.totalUSDC()).toString())/10**usdcDecimals;
+    const tvlEthEq = tEth + usdToEth(tUsdc);
+    $("#tvlSwap").textContent  = fmt(tvlEthEq)+' ETH';
+    $("#tvlPools").textContent = fmt(tvlEthEq)+' ETH';
+    const row = `
+      <tr>
+        <td>ETH / USDC</td>
+        <td>${APY_POOL}%</td>
+        <td>${fmt(tvlEthEq)}</td>
+        <td id="volCell">$0</td>
+        <td>1 pt / $ / min</td>
+        <td>
+          <div class="row" style="gap:8px">
+            <button class="btn" id="btnOpenAdd">ADD</button>
+            <button class="btn secondary" id="btnOpenRemove">REMOVE</button>
+          </div>
+        </td>
+      </tr>`;
+    $("#poolRows").innerHTML = row;
+    const btn = $("#btnOpenAdd"); if(btn) btn.onclick = ()=>{ $("#addUsd").value=''; updateAddPreview(); $("#dlgAdd").showModal(); };
+    const btnR= $("#btnOpenRemove"); if(btnR) btnR.onclick = ()=>{ $("#rmUsd").value=''; updateRemovePreview(); $("#dlgRemove").showModal(); };
+  }
 
-  async function refreshTvl(){ const tEth=Number(ethers.utils.formatEther(await vault.totalETH())); const tUsdc = Number((await vault.totalUSDC()).toString())/10**usdcDecimals; const tvlEthEq = tEth + usdToEth(tUsdc); $('#tvlSwap').textContent=fmt(tvlEthEq)+' ETH'; $('#tvlPools').textContent=fmt(tvlEthEq)+' ETH'; const row=`<tr><td>ETH / USDC</td><td>${APY_POOL}%</td><td>${fmt(tvlEthEq)}</td><td id="volCell">$0</td><td>1 pt / $ / min</td><td><div class="row" style="gap:8px"><button class="btn" id="btnOpenAdd">ADD</button><button class="btn secondary" id="btnOpenRemove">REMOVE</button></div></td></tr>`; $('#poolRows').innerHTML=row; $('#btnOpenAdd')?.addEventListener('click', ()=>{ $('#addUsd').value=''; updateAddPreview(); $('#dlgAdd').showModal(); }); $('#btnOpenRemove')?.addEventListener('click', ()=>{ $('#rmUsd').value=''; updateRemovePreview(); $('#dlgRemove').showModal(); }); }
+  /* ========= Logs chunkés ========= */
+  async function getLogsChunked(address, topicsOr, fromBlock, toBlock, step=50000){
+    const logs=[]; let s=fromBlock;
+    const t = (toBlock==='latest')? await provider.getBlockNumber(): toBlock;
+    while(s<=t){
+      const e=Math.min(s+step,t);
+      try{
+        const part = await provider.getLogs({ address, fromBlock:s, toBlock:e, topics:[topicsOr] });
+        logs.push(...part);
+      }catch(e1){ console.error('getLogsChunk', e1); }
+      s=e+1;
+    }
+    return logs;
+  }
+  async function refreshVolumes24h(){
+    try{
+      const latest = await provider.getBlockNumber();
+      const start = Math.max(0, latest - 120000); // ~24h approx
+      let volUsd = 0;
+      const iS = new ethers.utils.Interface(SWAP_ABI);
+      const sLogs = await getLogsChunked(SWAP_ADDRESS, [iS.getEventTopic('SwapETHforUSDC'), iS.getEventTopic('SwapUSDCforETH')], start, 'latest');
+      for(const lg of sLogs){
+        const ev = iS.parseLog(lg);
+        if(ev.name==='SwapETHforUSDC'){ const eth=Number(ethers.utils.formatEther(ev.args.ethIn)); const p8=Number(ev.args.price8)/1e8; volUsd += eth*p8; }
+        else { const u=Number(ev.args.usdcIn)/10**usdcDecimals; volUsd += u; }
+      }
+      const iV = new ethers.utils.Interface(VAULT_ABI);
+      const vLogs = await getLogsChunked(VAULT_ADDRESS, [iV.getEventTopic('DepositETH'), iV.getEventTopic('DepositUSDC')], start, 'latest');
+      for(const lg of vLogs){
+        const ev = iV.parseLog(lg);
+        if(ev.name==='DepositETH'){ volUsd += ethToUsd(Number(ethers.utils.formatEther(ev.args.amount))); }
+        else { volUsd += Number(ev.args.amount)/10**usdcDecimals; }
+      }
+      $("#volPools").textContent = fmtUsd(volUsd);
+      const cell=$("#volCell"); if(cell) cell.textContent=fmtUsd(volUsd);
+    }catch(e){ console.error(e); }
+  }
 
-  // volumes 24h (approx) — logs chunkés
-  async function getLogsChunked(address, topicsOr, fromBlock, toBlock, step=50000){ const logs=[]; let s=fromBlock; const t = (toBlock==='latest')? await provider.getBlockNumber(): toBlock; while(s<=t){ const e=Math.min(s+step,t); try{ const part=await provider.getLogs({ address, fromBlock:s, toBlock:e, topics:[topicsOr] }); logs.push(...part);}catch(e1){ console.error('getLogsChunk', e1); } s=e+1; } return logs; }); logs.push(...part);}catch(e1){ console.error('getLogsChunk', e1); } s=e+1; } return logs; }
-  async function refreshVolumes24h(){ try{ const latest=await provider.getBlockNumber(); const start=Math.max(0,latest-120000); let volUsd=0; const ifaceS=new ethers.utils.Interface(SWAP_ABI); const sLogs=await getLogsChunked(SWAP_ADDRESS,[ifaceS.getEventTopic('SwapETHforUSDC'), ifaceS.getEventTopic('SwapUSDCforETH')], start, 'latest'); for(const lg of sLogs){ const ev=ifaceS.parseLog(lg); if(ev.name==='SwapETHforUSDC'){ const ethIn=Number(ethers.utils.formatEther(ev.args.ethIn)); const p8=Number(ev.args.price8)/1e8; volUsd+=ethIn*p8; } else { const u=Number(ev.args.usdcIn)/10**usdcDecimals; volUsd+=u; } } const ifaceV=new ethers.utils.Interface(VAULT_ABI); const vLogs=await getLogsChunked(VAULT_ADDRESS,[ifaceV.getEventTopic('DepositETH'), ifaceV.getEventTopic('DepositUSDC')], start, 'latest'); for(const lg of vLogs){ const ev=ifaceV.parseLog(lg); if(ev.name==='DepositETH'){ volUsd+=ethToUsd(Number(ethers.utils.formatEther(ev.args.amount))); } else { volUsd+= Number(ev.args.amount)/10**usdcDecimals; } } $('#volPools').textContent=fmtUsd(volUsd); const cell=$('#volCell'); if(cell) cell.textContent=fmtUsd(volUsd); }catch(e){ console.error(e); } }
+  /* ========= Leaderboard & points ========= */
+  async function loadParticipants(){
+    try{
+      const latest=await provider.getBlockNumber();
+      const from=0; // tout l'historique
+      const iV=new ethers.utils.Interface(VAULT_ABI);
+      const logs=await getLogsChunked(VAULT_ADDRESS,[iV.getEventTopic('DepositETH'),iV.getEventTopic('DepositUSDC'),iV.getEventTopic('WithdrawETH'),iV.getEventTopic('WithdrawUSDC')], from, 'latest');
+      const addrs=new Set();
+      for(const lg of logs){ if(lg.topics[1]) addrs.add('0x'+lg.topics[1].slice(26)); }
+      return Array.from(addrs);
+    }catch(e){ console.error(e); return []; }
+  }
+  async function refreshLeaderboard(){
+    const addrs = await loadParticipants();
+    if(me && !addrs.includes(me)) addrs.unshift(me);
+    const rows=[];
+    for(const a of addrs){
+      try{
+        const pScaled = await vault.pointsOf(a);
+        const pts = Number(pScaled)/1e6;
+        rows.push({a,pts});
+      }catch{}
+    }
+    rows.sort((x,y)=>y.pts-x.pts);
+    $("#lbRows").innerHTML = rows.map((r,i)=>`
+      <tr>
+        <td>${i===0?'🥇':i+1}</td>
+        <td><a href="https://base-sepolia.blockscout.com/address/${r.a}" target="_blank">${r.a.slice(0,6)+'…'+r.a.slice(-4)}</a></td>
+        <td>${fmt(r.pts,2)}</td>
+      </tr>
+    `).join('') || `<tr><td colspan="3" class="muted">Aucun participant détecté.</td></tr>`;
+    save('lb_cache', rows);
+  }
+  $("#btnRefreshLB").onclick = refreshLeaderboard;
+  $("#btnExportCSV").onclick = ()=>{
+    const rows = load('lb_cache',[]);
+    const csv = 'rank,address,points\n'+rows.map((r,i)=>`${i+1},${r.a},${r.pts}`).join('\n');
+    const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download='leaderboard.csv'; a.click(); URL.revokeObjectURL(url);
+  };
 
-  // leaderboard & points
-  async function loadParticipants(){ try{ const latest=await provider.getBlockNumber(); const from=0; const ifaceV=new ethers.utils.Interface(VAULT_ABI); const logs=await getLogsChunked(VAULT_ADDRESS,[ifaceV.getEventTopic('DepositETH'),ifaceV.getEventTopic('DepositUSDC'),ifaceV.getEventTopic('WithdrawETH'),ifaceV.getEventTopic('WithdrawUSDC')], from, 'latest'); const addrs=new Set(); for(const lg of logs){ if(lg.topics[1]) addrs.add('0x'+lg.topics[1].slice(26)); } return Array.from(addrs); }catch(e){ console.error(e); return []; } }
-  async function refreshLeaderboard(){ const addrs=await loadParticipants(); if(me && !addrs.includes(me)) addrs.unshift(me); const rows=[]; for(const a of addrs){ try{ const pScaled=await vault.pointsOf(a); const pts=Number(pScaled)/1e6; rows.push({a,pts}); }catch{} } rows.sort((x,y)=>y.pts-x.pts); $('#lbRows').innerHTML = rows.map((r,i)=>`<tr><td>${i===0?'🥇':i+1}</td><td><a target="_blank" href="https://base-sepolia.blockscout.com/address/${r.a}">${r.a.slice(0,6)+'…'+r.a.slice(-4)}</a></td><td>${fmt(r.pts,2)}</td></tr>`).join('') || `<tr><td colspan="3" class="muted">Aucun participant détecté.</td></tr>`; save('lb_cache', rows); }
-  $('#btnRefreshLB').onclick=refreshLeaderboard; $('#btnExportCSV').onclick=()=>{ const rows=load('lb_cache',[]); const csv='rank,address,points\n'+rows.map((r,i)=>`${i+1},${r.a},${r.pts}`).join('\n'); const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='leaderboard.csv'; a.click(); URL.revokeObjectURL(url); };
+  async function refreshMySwapPoints(){
+    try{
+      if(!provider || !SWAP_ADDRESS){ $("#mySwapPts").textContent = '0'; return; }
+      const who = me || (await (signer ?? provider).listAccounts())[0];
+      if(!who){ $("#mySwapPts").textContent = '—'; return; }
+      const iS = new ethers.utils.Interface(SWAP_ABI);
+      const logs = await getLogsChunked(SWAP_ADDRESS, [iS.getEventTopic('SwapETHforUSDC'), iS.getEventTopic('SwapUSDCforETH')], 0, 'latest');
+      let usdTotal = 0;
+      for(const lg of logs){
+        const ev = iS.parseLog(lg);
+        const u  = ev.args.user.toLowerCase();
+        if(u !== who.toLowerCase()) continue;
+        if(ev.name === "SwapETHforUSDC"){
+          const ethIn = Number(ethers.utils.formatEther(ev.args.ethIn));
+          const p8    = Number(ev.args.price8)/1e8;
+          usdTotal += ethIn * p8;
+        }else{
+          const usdcIn = Number(ev.args.usdcIn) / 10**usdcDecimals;
+          usdTotal += usdcIn;
+        }
+      }
+      const points = usdTotal * 10; // 10 pts / $
+      $("#mySwapPts").textContent = Math.floor(points).toLocaleString();
+    }catch(e){
+      console.error(e);
+    }
+  }
 
-  async function refreshMySwapPoints(){ try{ if(!provider || !SWAP_ADDRESS){ $('#mySwapPts').textContent='0'; return; } const who= me || (await (signer??provider).listAccounts())[0]; if(!who){ $('#mySwapPts').textContent='—'; return; } const latest=await provider.getBlockNumber(); const from=0; const iface=new ethers.utils.Interface(SWAP_ABI); const logs=await getLogsChunked(SWAP_ADDRESS,[iface.getEventTopic('SwapETHforUSDC'),iface.getEventTopic('SwapUSDCforETH')], from, 'latest'); let usd=0; for(const lg of logs){ const ev=iface.parseLog(lg); if(ev.args.user.toLowerCase()!==who.toLowerCase()) continue; if(ev.name==='SwapETHforUSDC'){ const eth=Number(ethers.utils.formatEther(ev.args.ethIn)); const p=Number(ev.args.price8)/1e8; usd+=eth*p; } else { usd+= Number(ev.args.usdcIn)/10**usdcDecimals; } } const pts=usd*10; $('#mySwapPts').textContent=Math.floor(pts).toLocaleString(); }catch(e){ console.error(e); } }
+  /* ========= Tabs ========= */
+  $$(".tab").forEach(t=>t.onclick=()=>{
+    $$(".tab").forEach(x=>x.classList.remove('active')); t.classList.add('active');
+    ["swap","pools","vaults","leaderboard","settings"].forEach(id=>{
+      $("#"+id).style.display = (t.dataset.tab===id)?(id==='swap'?'grid':'block'):'none';
+    });
+    if(t.dataset.tab==="pools"){ refreshTvl(); refreshMySwapPoints(); refreshVolumes24h(); }
+    if(t.dataset.tab==="leaderboard"){ refreshLeaderboard(); }
+  });
 
-  // tabs
-  $$('.tab').forEach(t=>t.onclick=()=>{ $$('.tab').forEach(x=>x.classList.remove('active')); t.classList.add('active'); const tabs=['swap','pools','vaults','leaderboard','settings']; tabs.forEach(id=>{ $('#'+id).style.display = (t.dataset.tab===id)? (id==='swap'?'grid':'block') : 'none'; }); if(t.dataset.tab==='pools'){ refreshTvl(); refreshMySwapPoints(); refreshVolumes24h(); } if(t.dataset.tab==='leaderboard'){ refreshLeaderboard(); } });
+  /* ========= Swap ========= */
+  async function updateGasEstimate(){
+    try{
+      if(!me){ $("#gasBox").textContent='Estimation gas: —'; return; }
+      const from = $("#swapFrom").value, to=$("#swapTo").value;
+      let amt = parseFloat($("#swapAmount").value);
+      if(!isFinite(amt) || amt<=0){ $("#gasBox").textContent='Estimation gas: —'; return; }
+      const s = swap.connect(signer);
+      if(from==='ETH' && to==='USDC'){
+        const g = await s.estimateGas.swapETHforUSDC({ value: ethers.utils.parseEther(String(amt)) });
+        $("#gasBox").textContent = 'Estimation gas: '+ g.toString();
+      } else if(from==='USDC' && to==='ETH'){
+        const u = ethers.utils.parseUnits(String(amt), usdcDecimals);
+        const g = await s.estimateGas.swapUSDCforETH(u);
+        $("#gasBox").textContent = 'Estimation gas: '+ g.toString();
+      } else { $("#gasBox").textContent='Estimation gas: —'; }
+    }catch{ $("#gasBox").textContent='Estimation gas: —'; }
+  }
+  $("#swapAmount").addEventListener('input', updateGasEstimate);
 
-  // actions
-  $('#btnApproveMax').onclick = async ()=>{ try{ if(!me){ await connect(); } const max= load('cfg_approve_max','1000000000000'); const amt= ethers.utils.parseUnits(String(max), usdcDecimals); const tx= await usdc.connect(signer).approve(SWAP_ADDRESS, amt); toast('Approve max en cours…'); await tx.wait(); toast('Approve confirmé ✅'); updateAllowanceBox(); }catch(e){ console.error(e); toast('Échec approve'); } };
-
-  $('#btnSwap').onclick = async ()=>{
+  $("#btnApproveMax").onclick = async ()=>{
     try{
       if(!me){ await connect(); }
-      const from=$('#swapFrom').value, to=$('#swapTo').value; const amt=parseFloat($('#swapAmount').value); if(!isFinite(amt)||amt<=0){ toast('Montant invalide'); return; }
-      const out = from==='ETH'? applyFee(amt*price()) : applyFee(amt/price());
+      const max = load('cfg_approve_max','1000000000000');
+      const amt = ethers.utils.parseUnits(String(max), usdcDecimals);
+      const tx  = await usdc.connect(signer).approve(SWAP_ADDRESS, amt);
+      toast("Approve max en cours…");
+      await tx.wait(); toast("Approve confirmé ✅"); updateAllowanceBox();
+    }catch(e){ console.error(e); toast('Échec approve'); }
+  };
+
+  $("#btnSwap").onclick = async ()=>{
+    try{
+      if(!me){ await connect(); }
+      const from = $("#swapFrom").value, to=$("#swapTo").value;
+      let amt = parseFloat($("#swapAmount").value);
+      if(!isFinite(amt) || amt<=0){ toast("Montant invalide"); return; }
+
+      const out = (from==='ETH')? applyFee(amt*price()) : applyFee(amt/price());
+      const s = swap.connect(signer);
+
       if(from==='ETH' && to==='USDC'){
-        // petite vérif de liquidité swap USDC
-        const balUSDC = Number((await usdc.balanceOf(SWAP_ADDRESS)).toString())/10**usdcDecimals;
-        if(balUSDC < out){ toast('Pas assez de liquidité USDC dans le contrat de swap.'); return; }
-        const tx = await swap.connect(signer).swapETHforUSDC({ value: ethers.utils.parseEther(String(amt)) });
-        toast('Swap ETH→USDC…'); await tx.wait(); toast('Confirmé ✅');
+        // check liquidité côté contrat de swap
+        const usdcBalSwap = Number((await usdc.balanceOf(SWAP_ADDRESS)).toString())/10**usdcDecimals;
+        if(usdcBalSwap < out){ toast('Pas assez de liquidité USDC dans le contrat de swap.'); return; }
+        const tx = await s.swapETHforUSDC({ value: ethers.utils.parseEther(String(amt)) });
+        toast("Swap ETH→USDC envoyé…"); await tx.wait(); toast("Swap confirmé ✅");
       } else if(from==='USDC' && to==='ETH'){
         const usdcIn = ethers.utils.parseUnits(String(amt), usdcDecimals);
         const allowance = await usdc.allowance(me, SWAP_ADDRESS);
-        if(allowance.lt(usdcIn)){ const txa= await usdc.connect(signer).approve(SWAP_ADDRESS, usdcIn); toast('Approve USDC…'); await txa.wait(); }
-        const tx = await swap.connect(signer).swapUSDCforETH(usdcIn);
-        toast('Swap USDC→ETH…'); await tx.wait(); toast('Confirmé ✅');
-      } else { toast('Sélection invalide'); return; }
-      await refreshBalances(); await refreshTvl(); await refreshMySwapPoints(); updateQuote(); updateAllowanceBox(); await refreshVolumes24h();
-    }catch(e){ console.error(e); const msg = e?.data?.message || e?.error?.message || e?.message || 'Échec du swap'; toast(msg); }
+        if(allowance.lt(usdcIn)){
+          const txa = await usdc.connect(signer).approve(SWAP_ADDRESS, usdcIn);
+          toast("Approve USDC…"); await txa.wait();
+        }
+        const tx = await s.swapUSDCforETH(usdcIn);
+        toast("Swap USDC→ETH envoyé…"); await tx.wait(); toast("Swap confirmé ✅");
+      } else {
+        toast("Sélection invalide."); return;
+      }
+
+      // refresh
+      await refreshBalances();
+      await refreshTvl();
+      await refreshMySwapPoints();
+      updateQuote();
+      updateAllowanceBox();
+      await refreshVolumes24h();
+    }catch(e){
+      console.error(e);
+      const msg = (e && (e.data && e.data.message || e.error && e.error.message || e.message)) || 'Échec du swap';
+      toast(msg);
+    }
   };
 
-  // Pools modals
-  $('#btnAddCancel').onclick = ()=>$('#dlgAdd').close();
-  function updateAddPreview(){ const usd=parseFloat($('#addUsd').value); if(!isFinite(usd)||usd<=0){ $('#addEthPreview').value=''; $('#addUsdcPreview').value=''; return;} const half=usd/2; $('#addEthPreview').value=fmt(usdToEth(half))+' ETH'; $('#addUsdcPreview').value=fmt(half)+' USDC'; }
-  $('#addUsd').oninput=updateAddPreview;
-  $('#btnAddConfirm').onclick = async ()=>{ try{ if(!me){ await connect(); } const usd=parseFloat($('#addUsd').value); if(!isFinite(usd)||usd<=0){ toast('Montant invalide'); return;} const half=usd/2; const ethAmt=usdToEth(half); const usdcAmt=half; const v=vault.connect(signer); toast('Dépôt ETH…'); const t1= await v.depositETH({ value: ethers.utils.parseEther(String(ethAmt)) }); await t1.wait(); const need= ethers.utils.parseUnits(String(usdcAmt), usdcDecimals); const allowance= await usdc.allowance(me, VAULT_ADDRESS); if(allowance.lt(need)){ toast('Approve USDC…'); const txa= await usdc.connect(signer).approve(VAULT_ADDRESS, need); await txa.wait(); } toast('Dépôt USDC…'); const t2= await v.depositUSDC(need); await t2.wait(); toast('Dépôt 50/50 réussi ✅'); $('#dlgAdd').close(); refreshBalances(); refreshTvl(); refreshLeaderboard(); refreshVolumes24h(); }catch(e){ console.error(e); toast('Échec du dépôt'); } };
+  /* ========= Pools (ADD/REMOVE 50/50) ========= */
+  $("#btnAddCancel").onclick = ()=>$("#dlgAdd").close();
+  function updateAddPreview(){
+    const usd = parseFloat($("#addUsd").value);
+    if(!isFinite(usd) || usd<=0){ $("#addEthPreview").value=''; $("#addUsdcPreview").value=''; return; }
+    const half = usd/2; $("#addEthPreview").value = fmt(usdToEth(half))+' ETH'; $("#addUsdcPreview").value = fmt(half)+' USDC';
+  }
+  $("#addUsd").oninput = updateAddPreview;
 
-  $('#btnRemoveCancel').onclick = ()=>$('#dlgRemove').close();
-  function updateRemovePreview(){ const usd=parseFloat($('#rmUsd').value); if(!isFinite(usd)||usd<=0){ $('#rmEthPreview').value=''; $('#rmUsdcPreview').value=''; return;} const half=usd/2; $('#rmEthPreview').value=fmt(usdToEth(half))+' ETH'; $('#rmUsdcPreview').value=fmt(half)+' USDC'; }
-  $('#rmUsd').oninput=updateRemovePreview;
-  $('#btnRemoveConfirm').onclick = async ()=>{ try{ if(!me){ await connect(); } const usd=parseFloat($('#rmUsd').value); if(!isFinite(usd)||usd<=0){ toast('Montant invalide'); return;} const half=usd/2; const ethAmt=usdToEth(half); const usdcAmt=half; const v=vault.connect(signer); toast('Retrait ETH…'); const t1= await v.withdrawETH(ethers.utils.parseEther(String(ethAmt))); await t1.wait(); toast('Retrait USDC…'); const t2= await v.withdrawUSDC(ethers.utils.parseUnits(String(usdcAmt), usdcDecimals)); await t2.wait(); toast('Retrait 50/50 effectué ✅'); $('#dlgRemove').close(); refreshBalances(); refreshTvl(); refreshLeaderboard(); refreshVolumes24h(); }catch(e){ console.error(e); toast('Échec du retrait'); } };
+  $("#btnAddConfirm").onclick = async ()=>{
+    try{
+      if(!me){ await connect(); }
+      const usd = parseFloat($("#addUsd").value);
+      if(!isFinite(usd) || usd<=0){ toast("Montant invalide"); return; }
+      const halfUsd = usd/2;
+      const ethAmt  = usdToEth(halfUsd); // en ETH
+      const usdcAmt = halfUsd;           // en USDC
+      const vSigner = vault.connect(signer);
+      toast('Dépôt ETH en cours…');
+      const tx1 = await vSigner.depositETH({ value: ethers.utils.parseEther(String(ethAmt)) });
+      await tx1.wait();
+      const need = ethers.utils.parseUnits(String(usdcAmt), usdcDecimals);
+      const allowance = await usdc.allowance(me, VAULT_ADDRESS);
+      if(allowance.lt(need)){
+        toast('Approve USDC…');
+        const txa = await usdc.connect(signer).approve(VAULT_ADDRESS, need);
+        await txa.wait();
+      }
+      toast('Dépôt USDC…');
+      const tx2 = await vSigner.depositUSDC(need);
+      await tx2.wait();
+      toast('Dépôt 50/50 réussi ✅');
+      $("#dlgAdd").close();
+      refreshBalances(); refreshTvl(); refreshLeaderboard(); refreshVolumes24h();
+    }catch(e){ console.error(e); toast('Échec du dépôt'); }
+  };
 
-  // Settings
-  $('#cfgSlippage').value = load('cfg_slippage','0.5');
-  $('#cfgApproveMax').value = load('cfg_approve_max','1000000000000');
-  $('#btnSaveCfg').onclick = ()=>{ save('cfg_slippage',$('#cfgSlippage').value); save('cfg_approve_max',$('#cfgApproveMax').value); toast('Paramètres sauvegardés'); updateQuote(); };
+  $("#btnRemoveCancel").onclick = ()=>$("#dlgRemove").close();
+  function updateRemovePreview(){
+    const usd = parseFloat($("#rmUsd").value);
+    if(!isFinite(usd) || usd<=0){ $("#rmEthPreview").value=''; $("#rmUsdcPreview").value=''; return; }
+    const half = usd/2; $("#rmEthPreview").value = fmt(usdToEth(half))+' ETH'; $("#rmUsdcPreview").value = fmt(half)+' USDC';
+  }
+  $("#rmUsd").oninput = updateRemovePreview;
 
-  // Boot
-  async function onReady(){ await initContracts(); $('#vaultEthApy').textContent=APY_VAULT+'%'; $('#vaultUsdcApy').textContent=APY_VAULT+'%'; updateQuote(); refreshBalances(); refreshTvl(); refreshLeaderboard(); refreshMySwapPoints(); updateAllowanceBox(); refreshVolumes24h(); }
-  await ensureProvider().catch(()=>{}); if(provider){ onReady(); }
+  $("#btnRemoveConfirm").onclick = async ()=>{
+    try{
+      if(!me){ await connect(); }
+      const usd = parseFloat($("#rmUsd").value);
+      if(!isFinite(usd) || usd<=0){ toast("Montant invalide"); return; }
+      const halfUsd = usd/2;
+      const ethAmt  = usdToEth(halfUsd);
+      const usdcAmt = halfUsd;
+      const vSigner = vault.connect(signer);
+      toast('Retrait ETH…');
+      const tx1 = await vSigner.withdrawETH(ethers.utils.parseEther(String(ethAmt)));
+      await tx1.wait();
+      toast('Retrait USDC…');
+      const tx2 = await vSigner.withdrawUSDC(ethers.utils.parseUnits(String(usdcAmt), usdcDecimals));
+      await tx2.wait();
+      toast('Retrait 50/50 effectué ✅');
+      $("#dlgRemove").close();
+      refreshBalances(); refreshTvl(); refreshLeaderboard(); refreshVolumes24h();
+    }catch(e){ console.error(e); toast('Échec du retrait'); }
+  };
 
-  // Tick 10s
-  setInterval(async()=>{ try{ price8 = await swap.ethUsd(); $('#priceBox').textContent='$'+(Number(price8)/1e8).toLocaleString(); updateQuote(); await refreshTvl(); await refreshLeaderboard(); await refreshMySwapPoints(); await refreshVolumes24h(); }catch{} },10000);
+  /* ========= Vaults dépôts / retraits ========= */
+  $("#btnVaultMaxETH").onclick = async ()=>{
+    if(!me){ await connect(); }
+    const bal = await provider.getBalance(me);
+    const val = Math.max(0, Number(ethers.utils.formatEther(bal)) - 0.0002);
+    $("#vaultEthAmount").value = val.toFixed(6);
+  };
+  $("#btnVaultMaxUSDC").onclick = async ()=>{
+    if(!me){ await connect(); }
+    const bal = await usdc.balanceOf(me);
+    $("#vaultUsdcAmount").value = (Number(bal)/10**usdcDecimals).toFixed(2);
+  };
+  $("#btnVaultDepositETH").onclick = async ()=>{
+    if(!me){ await connect(); }
+    const v = parseFloat($("#vaultEthAmount").value);
+    if(!isFinite(v)||v<=0){ toast('Montant invalide'); return; }
+    try{
+      const tx = await vault.connect(signer).depositETH({ value: ethers.utils.parseEther(String(v)) });
+      await tx.wait(); toast('Déposé ✅'); refreshBalances(); refreshTvl(); refreshLeaderboard(); refreshVolumes24h();
+    }catch(e){ console.error(e); toast('Échec du dépôt'); }
+  };
+  $("#btnVaultDepositUSDC").onclick = async ()=>{
+    if(!me){ await connect(); }
+    const v = parseFloat($("#vaultUsdcAmount").value);
+    if(!isFinite(v)||v<=0){ toast('Montant invalide'); return; }
+    try{
+      const amt = ethers.utils.parseUnits(String(v), usdcDecimals);
+      const allowance = await usdc.allowance(me, VAULT_ADDRESS);
+      if(allowance.lt(amt)){
+        const txa = await usdc.connect(signer).approve(VAULT_ADDRESS, amt);
+        await txa.wait();
+      }
+      const tx = await vault.connect(signer).depositUSDC(amt);
+      await tx.wait(); toast('Déposé ✅'); refreshBalances(); refreshTvl(); refreshLeaderboard(); refreshVolumes24h();
+    }catch(e){ console.error(e); toast('Échec du dépôt'); }
+  };
+  $("#btnVaultWithdrawETH").onclick = async ()=>{
+    if(!me){ await connect(); }
+    const v = parseFloat($("#vaultEthWithdraw").value);
+    if(!isFinite(v)||v<=0){ toast('Montant invalide'); return; }
+    try{
+      const tx = await vault.connect(signer).withdrawETH(ethers.utils.parseEther(String(v)));
+      await tx.wait(); toast('Retiré ✅'); refreshBalances(); refreshTvl(); refreshLeaderboard(); refreshVolumes24h();
+    }catch(e){ console.error(e); toast('Échec du retrait'); }
+  };
+  $("#btnVaultWithdrawUSDC").onclick = async ()=>{
+    if(!me){ await connect(); }
+    const v = parseFloat($("#vaultUsdcWithdraw").value);
+    if(!isFinite(v)||v<=0){ toast('Montant invalide'); return; }
+    try{
+      const tx = await vault.connect(signer).withdrawUSDC(ethers.utils.parseUnits(String(v), usdcDecimals));
+      await tx.wait(); toast('Retiré ✅'); refreshBalances(); refreshTvl(); refreshLeaderboard(); refreshVolumes24h();
+    }catch(e){ console.error(e); toast('Échec du retrait'); }
+  };
+
+  /* ========= Settings ========= */
+  $("#cfgSlippage").value = load('cfg_slippage','0.5');
+  $("#cfgApproveMax").value = load('cfg_approve_max','1000000000000');
+  $("#btnSaveCfg").onclick = ()=>{ save('cfg_slippage', $("#cfgSlippage").value); save('cfg_approve_max', $("#cfgApproveMax").value); toast('Paramètres sauvegardés'); updateQuote(); };
+
+  /* ========= Boot ========= */
+  async function onReady(){
+    await initContracts();
+    $("#vaultEthApy").textContent = APY_VAULT+'%';
+    $("#vaultUsdcApy").textContent = APY_VAULT+'%';
+    updateQuote();
+    refreshBalances();
+    refreshTvl();
+    refreshLeaderboard();
+    refreshMySwapPoints();
+    updateAllowanceBox();
+    refreshVolumes24h();
+  }
+  await ensureProvider().catch(()=>{});
+  if(provider){ onReady(); }
+
+  /* ========= Tick 10s ========= */
+  setInterval(async ()=>{
+    try{
+      price8 = Number(await swap.ethUsd());
+      $("#priceBox").textContent = '$'+(price8/1e8).toLocaleString();
+      updateQuote();
+      await refreshTvl();
+      await refreshLeaderboard();
+      await refreshMySwapPoints();
+      await refreshVolumes24h();
+    }catch{}
+  }, 10000);
 })();
 </script>
 </body>
