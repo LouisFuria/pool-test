@@ -314,8 +314,28 @@ window.addEventListener('error', (e)=>{ try{ const msg=(e?.error?.message||e?.me
     return provider;
   }
   async function connect(){
-    await ensureProvider();
-    const accs = await window.ethereum.request({ method:'eth_requestAccounts' });
+    try{
+      await ensureProvider();
+      const accs = await window.ethereum.request({ method:'eth_requestAccounts' });
+      me = accs[0]; signer = provider.getSigner();
+      let net = await provider.getNetwork();
+      if(net.chainId!==CHAIN_ID_DEC){
+        try{
+          await window.ethereum.request({ method:'wallet_switchEthereumChain', params:[{ chainId: CHAIN_ID_HEX }] });
+        }catch(e){
+          // si réseau absent → addEthereumChain
+          if(e?.code===4902 || /unrecognized|not added/i.test(e?.message||'')){
+            await window.ethereum.request({ method:'wallet_addEthereumChain', params:[{ chainId: CHAIN_ID_HEX, chainName:'Base Sepolia', nativeCurrency:{ name:'ETH', symbol:'ETH', decimals:18 }, rpcUrls:['https://sepolia.base.org'], blockExplorerUrls:['https://base-sepolia.blockscout.com'] }] });
+          } else { throw e; }
+        }
+        net = await provider.getNetwork();
+      }
+      $('#netChip').textContent = `Réseau: ${labelChain(net.chainId)}`;
+      save('furia_connected', true);
+      afterConnectUI();
+      await onReady();
+    }catch(err){ console.error(err); toast(err?.message||'Connexion impossible'); }
+  });
     me = accs[0]; signer = provider.getSigner();
     const net = await provider.getNetwork();
     if(net.chainId!==CHAIN_ID_DEC){
@@ -331,7 +351,9 @@ window.addEventListener('error', (e)=>{ try{ const msg=(e?.error?.message||e?.me
   $('#btnConnect').onclick = connect; $('#btnDisconnect').onclick = disconnect;
   $('#btnImportUSDC').onclick = async ()=>{ try{ await window.ethereum?.request?.({ method:'wallet_watchAsset', params:{ type:'ERC20', options:{ address:USDC_ADDRESS, symbol:'USDC', decimals: usdcDecimals } } }); }catch{ toast('Import token non supporté'); } };
 
-  if(load('furia_connected',false)){ ensureProvider().then(async()=>{ const accs=await provider.listAccounts(); if(accs[0]){ me=accs[0]; signer=provider.getSigner(); afterConnectUI(); onReady(); } }).catch(()=>{}); }
+  if(load('furia_connected',false)){
+    ensureProvider().then(async()=>{ const accs=await provider.listAccounts(); if(accs[0]){ me=accs[0]; signer=provider.getSigner(); afterConnectUI(); onReady(); } }).catch(()=>{});
+  } }).catch(()=>{}); }
   window.ethereum?.on?.('accountsChanged', (a)=>{ if(a && a[0]){ me=a[0]; signer=provider.getSigner(); afterConnectUI(); onReady(); } else { disconnect(); }});
   window.ethereum?.on?.('chainChanged', ()=>window.location.reload());
 
@@ -360,15 +382,15 @@ window.addEventListener('error', (e)=>{ try{ const msg=(e?.error?.message||e?.me
   async function refreshTvl(){ const tEth=Number(ethers.utils.formatEther(await vault.totalETH())); const tUsdc = Number((await vault.totalUSDC()).toString())/10**usdcDecimals; const tvlEthEq = tEth + usdToEth(tUsdc); $('#tvlSwap').textContent=fmt(tvlEthEq)+' ETH'; $('#tvlPools').textContent=fmt(tvlEthEq)+' ETH'; const row=`<tr><td>ETH / USDC</td><td>${APY_POOL}%</td><td>${fmt(tvlEthEq)}</td><td id="volCell">$0</td><td>1 pt / $ / min</td><td><div class="row" style="gap:8px"><button class="btn" id="btnOpenAdd">ADD</button><button class="btn secondary" id="btnOpenRemove">REMOVE</button></div></td></tr>`; $('#poolRows').innerHTML=row; $('#btnOpenAdd')?.addEventListener('click', ()=>{ $('#addUsd').value=''; updateAddPreview(); $('#dlgAdd').showModal(); }); $('#btnOpenRemove')?.addEventListener('click', ()=>{ $('#rmUsd').value=''; updateRemovePreview(); $('#dlgRemove').showModal(); }); }
 
   // volumes 24h (approx) — logs chunkés
-  async function getLogsChunked(address, topicsOr, fromBlock, toBlock, step=50000){ const logs=[]; let s=fromBlock; const t = (toBlock==='latest')? await provider.getBlockNumber(): toBlock; while(s<=t){ const e=Math.min(s+step,t); try{ const part=await provider.getLogs({ address, fromBlock:s, toBlock:e, topics:[topicsOr] }); logs.push(...part);}catch(e1){ console.error('getLogsChunk', e1); } s=e+1; } return logs; }
+  async function getLogsChunked(address, topicsOr, fromBlock, toBlock, step=50000){ const logs=[]; let s=fromBlock; const t = (toBlock==='latest')? await provider.getBlockNumber(): toBlock; while(s<=t){ const e=Math.min(s+step,t); try{ const part=await provider.getLogs({ address, fromBlock:s, toBlock:e, topics:[topicsOr] }); logs.push(...part);}catch(e1){ console.error('getLogsChunk', e1); } s=e+1; } return logs; }); logs.push(...part);}catch(e1){ console.error('getLogsChunk', e1); } s=e+1; } return logs; }
   async function refreshVolumes24h(){ try{ const latest=await provider.getBlockNumber(); const start=Math.max(0,latest-120000); let volUsd=0; const ifaceS=new ethers.utils.Interface(SWAP_ABI); const sLogs=await getLogsChunked(SWAP_ADDRESS,[ifaceS.getEventTopic('SwapETHforUSDC'), ifaceS.getEventTopic('SwapUSDCforETH')], start, 'latest'); for(const lg of sLogs){ const ev=ifaceS.parseLog(lg); if(ev.name==='SwapETHforUSDC'){ const ethIn=Number(ethers.utils.formatEther(ev.args.ethIn)); const p8=Number(ev.args.price8)/1e8; volUsd+=ethIn*p8; } else { const u=Number(ev.args.usdcIn)/10**usdcDecimals; volUsd+=u; } } const ifaceV=new ethers.utils.Interface(VAULT_ABI); const vLogs=await getLogsChunked(VAULT_ADDRESS,[ifaceV.getEventTopic('DepositETH'), ifaceV.getEventTopic('DepositUSDC')], start, 'latest'); for(const lg of vLogs){ const ev=ifaceV.parseLog(lg); if(ev.name==='DepositETH'){ volUsd+=ethToUsd(Number(ethers.utils.formatEther(ev.args.amount))); } else { volUsd+= Number(ev.args.amount)/10**usdcDecimals; } } $('#volPools').textContent=fmtUsd(volUsd); const cell=$('#volCell'); if(cell) cell.textContent=fmtUsd(volUsd); }catch(e){ console.error(e); } }
 
   // leaderboard & points
-  async function loadParticipants(){ try{ const latest=await provider.getBlockNumber(); const from=Math.max(0,latest-500000); const ifaceV=new ethers.utils.Interface(VAULT_ABI); const logs=await getLogsChunked(VAULT_ADDRESS,[ifaceV.getEventTopic('DepositETH'),ifaceV.getEventTopic('DepositUSDC'),ifaceV.getEventTopic('WithdrawETH'),ifaceV.getEventTopic('WithdrawUSDC')], from, 'latest'); const addrs=new Set(); for(const lg of logs){ if(lg.topics[1]) addrs.add('0x'+lg.topics[1].slice(26)); } return Array.from(addrs); }catch(e){ console.error(e); return []; } }
+  async function loadParticipants(){ try{ const latest=await provider.getBlockNumber(); const from=0; const ifaceV=new ethers.utils.Interface(VAULT_ABI); const logs=await getLogsChunked(VAULT_ADDRESS,[ifaceV.getEventTopic('DepositETH'),ifaceV.getEventTopic('DepositUSDC'),ifaceV.getEventTopic('WithdrawETH'),ifaceV.getEventTopic('WithdrawUSDC')], from, 'latest'); const addrs=new Set(); for(const lg of logs){ if(lg.topics[1]) addrs.add('0x'+lg.topics[1].slice(26)); } return Array.from(addrs); }catch(e){ console.error(e); return []; } }
   async function refreshLeaderboard(){ const addrs=await loadParticipants(); if(me && !addrs.includes(me)) addrs.unshift(me); const rows=[]; for(const a of addrs){ try{ const pScaled=await vault.pointsOf(a); const pts=Number(pScaled)/1e6; rows.push({a,pts}); }catch{} } rows.sort((x,y)=>y.pts-x.pts); $('#lbRows').innerHTML = rows.map((r,i)=>`<tr><td>${i===0?'🥇':i+1}</td><td><a target="_blank" href="https://base-sepolia.blockscout.com/address/${r.a}">${r.a.slice(0,6)+'…'+r.a.slice(-4)}</a></td><td>${fmt(r.pts,2)}</td></tr>`).join('') || `<tr><td colspan="3" class="muted">Aucun participant détecté.</td></tr>`; save('lb_cache', rows); }
   $('#btnRefreshLB').onclick=refreshLeaderboard; $('#btnExportCSV').onclick=()=>{ const rows=load('lb_cache',[]); const csv='rank,address,points\n'+rows.map((r,i)=>`${i+1},${r.a},${r.pts}`).join('\n'); const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='leaderboard.csv'; a.click(); URL.revokeObjectURL(url); };
 
-  async function refreshMySwapPoints(){ try{ if(!provider || !SWAP_ADDRESS){ $('#mySwapPts').textContent='0'; return; } const who= me || (await (signer??provider).listAccounts())[0]; if(!who){ $('#mySwapPts').textContent='—'; return; } const latest=await provider.getBlockNumber(); const from=Math.max(0,latest-500000); const iface=new ethers.utils.Interface(SWAP_ABI); const logs=await getLogsChunked(SWAP_ADDRESS,[iface.getEventTopic('SwapETHforUSDC'),iface.getEventTopic('SwapUSDCforETH')], from, 'latest'); let usd=0; for(const lg of logs){ const ev=iface.parseLog(lg); if(ev.args.user.toLowerCase()!==who.toLowerCase()) continue; if(ev.name==='SwapETHforUSDC'){ const eth=Number(ethers.utils.formatEther(ev.args.ethIn)); const p=Number(ev.args.price8)/1e8; usd+=eth*p; } else { usd+= Number(ev.args.usdcIn)/10**usdcDecimals; } } const pts=usd*10; $('#mySwapPts').textContent=Math.floor(pts).toLocaleString(); }catch(e){ console.error(e); } }
+  async function refreshMySwapPoints(){ try{ if(!provider || !SWAP_ADDRESS){ $('#mySwapPts').textContent='0'; return; } const who= me || (await (signer??provider).listAccounts())[0]; if(!who){ $('#mySwapPts').textContent='—'; return; } const latest=await provider.getBlockNumber(); const from=0; const iface=new ethers.utils.Interface(SWAP_ABI); const logs=await getLogsChunked(SWAP_ADDRESS,[iface.getEventTopic('SwapETHforUSDC'),iface.getEventTopic('SwapUSDCforETH')], from, 'latest'); let usd=0; for(const lg of logs){ const ev=iface.parseLog(lg); if(ev.args.user.toLowerCase()!==who.toLowerCase()) continue; if(ev.name==='SwapETHforUSDC'){ const eth=Number(ethers.utils.formatEther(ev.args.ethIn)); const p=Number(ev.args.price8)/1e8; usd+=eth*p; } else { usd+= Number(ev.args.usdcIn)/10**usdcDecimals; } } const pts=usd*10; $('#mySwapPts').textContent=Math.floor(pts).toLocaleString(); }catch(e){ console.error(e); } }
 
   // tabs
   $$('.tab').forEach(t=>t.onclick=()=>{ $$('.tab').forEach(x=>x.classList.remove('active')); t.classList.add('active'); const tabs=['swap','pools','vaults','leaderboard','settings']; tabs.forEach(id=>{ $('#'+id).style.display = (t.dataset.tab===id)? (id==='swap'?'grid':'block') : 'none'; }); if(t.dataset.tab==='pools'){ refreshTvl(); refreshMySwapPoints(); refreshVolumes24h(); } if(t.dataset.tab==='leaderboard'){ refreshLeaderboard(); } });
