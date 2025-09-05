@@ -163,6 +163,10 @@
           <input id="vaultEthAmount" class="input" placeholder="Montant ETH (ex: 0.1)"/>
           <div class="row"><button id="btnVaultMaxETH" class="pill">Max</button><button id="btnVaultDepositETH" class="btn">Déposer</button></div>
         </div>
+        <div class="two" style="margin-top:10px">
+          <input id="vaultEthWithdraw" class="input" placeholder="Retrait ETH (ex: 0.05)"/>
+          <div class="row"><button id="btnVaultWithdrawETH" class="btn secondary">Retirer</button></div>
+        </div>
         <div class="note" id="noteVaultETH">(Votre solde et gas seront affichés.)</div>
       </div>
       <div class="card">
@@ -172,6 +176,10 @@
         <div class="two" style="margin-top:10px">
           <input id="vaultUsdcAmount" class="input" placeholder="Montant USDC (ex: 200)"/>
           <div class="row"><button id="btnVaultMaxUSDC" class="pill">Max</button><button id="btnVaultDepositUSDC" class="btn">Déposer</button></div>
+        </div>
+        <div class="two" style="margin-top:10px">
+          <input id="vaultUsdcWithdraw" class="input" placeholder="Retrait USDC (ex: 100)"/>
+          <div class="row"><button id="btnVaultWithdrawUSDC" class="btn secondary">Retirer</button></div>
         </div>
         <div class="note" id="noteVaultUSDC">Allowance et gas estimé seront affichés.</div>
       </div>
@@ -235,6 +243,24 @@
   </div>
 </dialog>
 
+<dialog id="dlgRemove">
+  <div class="body">
+    <div class="h">Retirer de la pool</div>
+    <div class="note" style="margin-bottom:8px">Entrer un <b>montant total en $</b> à retirer. Le retrait sera réalisé 50% en ETH et 50% en USDC au prix courant.</div>
+    <div class="two" style="margin-bottom:10px">
+      <input id="rmUsd" class="input" placeholder="Montant en $ (ex: 100)"/>
+      <button id="btnRemoveConfirm" class="btn">Retirer</button>
+    </div>
+    <div class="two">
+      <input id="rmEthPreview" class="input" placeholder="≈ ETH" readonly />
+      <input id="rmUsdcPreview" class="input" placeholder="≈ USDC" readonly />
+    </div>
+    <div class="row" style="margin-top:10px;justify-content:flex-end">
+      <button id="btnRemoveCancel" class="btn secondary">Annuler</button>
+    </div>
+  </div>
+</dialog>
+
 <div id="toast" class="toast" style="display:none"></div>
 
 <script>
@@ -253,7 +279,8 @@
     "function decimals() view returns (uint8)",
     "function balanceOf(address) view returns (uint256)",
     "function allowance(address owner,address spender) view returns (uint256)",
-    "function approve(address spender, uint256 amount) returns (bool)"
+    "function approve(address spender, uint256 amount) returns (bool)",
+    "function transfer(address to, uint256 amount) returns (bool)"
   ];
 
   const SWAP_ABI = [
@@ -271,6 +298,8 @@
     "function totalUSDC() view returns (uint256)",
     "function depositETH() payable",
     "function depositUSDC(uint256 amount)",
+    "function withdrawETH(uint256 amount)",
+    "function withdrawUSDC(uint256 amount)",
     "function pointsOf(address u) view returns (uint256)",   // points * 1e6 (scaled)
     "event DepositETH(address indexed user, uint256 amount)",
     "event DepositUSDC(address indexed user, uint256 amount)",
@@ -393,9 +422,11 @@
         <td>${fmt(tvlEthEq)}</td>
         <td id="volCell">$0</td>
         <td>1 pt / $ / min</td>
-        <td><button class=\"btn\" id=\"btnOpenAdd\">ADD</button></td>
+        <td><div class=\"row\" style=\"gap:8px\"><button class=\"btn\" id=\"btnOpenAdd\">ADD</button><button class=\"btn secondary\" id=\"btnOpenRemove\">REMOVE</button></div></td>
       </tr>`;
     $("#poolRows").innerHTML = row;
+    const btn = $("#btnOpenAdd"); if(btn) btn.onclick = ()=>{ $("#addUsd").value=''; updateAddPreview(); $("#dlgAdd").showModal(); };
+    const btnR = $("#btnOpenRemove"); if(btnR) btnR.onclick = ()=>{ $("#rmUsd").value=''; updateRemovePreview(); $("#dlgRemove").showModal(); };
     const btn = $("#btnOpenAdd"); if(btn) btn.onclick = ()=>$("#dlgAdd").showModal();
   }
 
@@ -459,15 +490,12 @@
     const half = usd/2; $("#addEthPreview").value = fmt(usdToEth(half))+' ETH'; $("#addUsdcPreview").value = fmt(half)+' USDC';
   }
   $("#addUsd").oninput = updateAddPreview;
-  $("#btnAddCancel").onclick = ()=>$("#dlgAdd").close();
   $("#btnAddConfirm").onclick = async ()=>{
     try{
       if(!me){ await connect(); }
       const usd = parseFloat($("#addUsd").value);
       if(!isFinite(usd) || usd<=0){ toast("Montant invalide"); return; }
-      const halfUsd = usd/2;
-      const ethAmt  = usdToEth(halfUsd); // en ETH
-      const usdcAmt = halfUsd;           // en USDC
+      const halfUsd = usd/2; const ethAmt  = usdToEth(halfUsd); const usdcAmt = halfUsd;
       const vSigner = vault.connect(signer);
       toast('Dépôt ETH en cours…');
       const tx1 = await vSigner.depositETH({ value: ethers.utils.parseEther(String(ethAmt)) });
@@ -475,17 +503,34 @@
       const need = ethers.utils.parseUnits(String(usdcAmt), usdcDecimals);
       const allowance = await usdc.allowance(me, VAULT_ADDRESS);
       if(allowance.lt(need)){
-        toast('Approve USDC…');
-        const txa = await usdc.connect(signer).approve(VAULT_ADDRESS, need);
-        await txa.wait();
+        toast('Approve USDC…'); const txa = await usdc.connect(signer).approve(VAULT_ADDRESS, need); await txa.wait();
       }
-      toast('Dépôt USDC…');
-      const tx2 = await vSigner.depositUSDC(need);
-      await tx2.wait();
+      toast('Dépôt USDC…'); const tx2 = await vSigner.depositUSDC(need); await tx2.wait();
       toast('Dépôt 50/50 réussi ✅');
-      $("#dlgAdd").close();
-      refreshBalances(); refreshTvl(); refreshLeaderboard();
+      $("#dlgAdd").close(); refreshBalances(); refreshTvl(); refreshLeaderboard(); await refreshVolumes24h();
     }catch(e){ console.error(e); toast('Échec du dépôt'); }
+  };
+
+  // ========= Pools: retrait double-sided 50/50 ($)
+  $("#btnRemoveCancel").onclick = ()=>$("#dlgRemove").close();
+  function updateRemovePreview(){
+    const usd = parseFloat($("#rmUsd").value);
+    if(!isFinite(usd) || usd<=0){ $("#rmEthPreview").value=''; $("#rmUsdcPreview").value=''; return; }
+    const half = usd/2; $("#rmEthPreview").value = fmt(usdToEth(half))+' ETH'; $("#rmUsdcPreview").value = fmt(half)+' USDC';
+  }
+  $("#rmUsd").oninput = updateRemovePreview;
+  $("#btnRemoveConfirm").onclick = async ()=>{
+    try{
+      if(!me){ await connect(); }
+      const usd = parseFloat($("#rmUsd").value);
+      if(!isFinite(usd) || usd<=0){ toast("Montant invalide"); return; }
+      const halfUsd = usd/2; const ethAmt  = usdToEth(halfUsd); const usdcAmt = halfUsd;
+      const vSigner = vault.connect(signer);
+      toast('Retrait ETH…'); const tx1 = await vSigner.withdrawETH(ethers.utils.parseEther(String(ethAmt))); await tx1.wait();
+      toast('Retrait USDC…'); const tx2 = await vSigner.withdrawUSDC(ethers.utils.parseUnits(String(usdcAmt), usdcDecimals)); await tx2.wait();
+      toast('Retrait 50/50 effectué ✅');
+      $("#dlgRemove").close(); refreshBalances(); refreshTvl(); refreshLeaderboard(); await refreshVolumes24h();
+    }catch(e){ console.error(e); toast('Échec du retrait'); }
   };
 
   // ========= Vaults dépôts unitaires (+ Max)
@@ -526,15 +571,14 @@
   };
 
   // ========= Leaderboard (events → adresses uniques) + pointsOf
+  async function getLogsChunked(address, topicsOr, fromBlock, toBlock, step=50000){
+    const logs=[]; let s = fromBlock; const t = toBlock; while(s<=t){ const e=Math.min(s+step, t); try{ const part = await provider.getLogs({ address, fromBlock:s, toBlock:e, topics:[topicsOr] }); logs.push(...part);}catch(e1){ console.error('getLogsChunked', e1); } s=e+1; } return logs; }
   async function loadParticipants(){
     try{
-      const topics = [
-        vault.filters.DepositETH().topics[0],
-        vault.filters.DepositUSDC().topics[0],
-        vault.filters.WithdrawETH().topics[0],
-        vault.filters.WithdrawUSDC().topics[0],
-      ];
-      const logs = await provider.getLogs({ fromBlock: 0, toBlock:'latest', address: VAULT_ADDRESS, topics:[topics] });
+      const latest = await provider.getBlockNumber();
+      const fromBlock = Math.max(0, latest - 500000); // 500k blocks back
+      const topicsOr = [vault.filters.DepositETH().topics[0], vault.filters.DepositUSDC().topics[0], vault.filters.WithdrawETH().topics[0], vault.filters.WithdrawUSDC().topics[0]];
+      const logs = await getLogsChunked(VAULT_ADDRESS, topicsOr, fromBlock, 'latest');
       const addrs = new Set();
       for(const lg of logs){ if(lg.topics[1]) addrs.add('0x'+lg.topics[1].slice(26)); }
       return Array.from(addrs);
@@ -603,6 +647,19 @@
   async function refreshMySwapPoints(){
     try{
       if(!provider || !SWAP_ADDRESS){ $("#mySwapPts").textContent = '0'; return; }
+      const who = me || (await (signer ?? provider).listAccounts())[0];
+      if(!who){ $("#mySwapPts").textContent = '—'; return; }
+      const latest = await provider.getBlockNumber();
+      const fromBlock = Math.max(0, latest - 500000);
+      const iface = new ethers.utils.Interface(SWAP_ABI);
+      const t1 = iface.getEventTopic("SwapETHforUSDC");
+      const t2 = iface.getEventTopic("SwapUSDCforETH");
+      const logs = await getLogsChunked(SWAP_ADDRESS, [t1,t2], fromBlock, 'latest');
+      let usdTotal = 0;
+      for(const lg of logs){ const ev = iface.parseLog(lg); const u = ev.args.user.toLowerCase(); if(u !== who.toLowerCase()) continue; if(ev.name === 'SwapETHforUSDC'){ const ethIn = Number(ethers.utils.formatEther(ev.args.ethIn)); const p8= Number(ev.args.price8)/1e8; usdTotal += ethIn * p8; } else if(ev.name === 'SwapUSDCforETH'){ const usdcIn = Number(ev.args.usdcIn) / 10**usdcDecimals; usdTotal += usdcIn; } }
+      const points = usdTotal * 10; $("#mySwapPts").textContent = who ? Math.floor(points).toLocaleString() : '—';
+    }catch(e){ console.error(e); }
+  }
       const who = me || (await (signer ?? provider).listAccounts())[0];
       if(!who){ $("#mySwapPts").textContent = '—'; return; }
 
