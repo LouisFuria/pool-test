@@ -218,10 +218,14 @@
 <dialog id="dlgAdd">
   <div class="body">
     <div class="h">Déposer dans la pool</div>
-    <div class="note" style="margin-bottom:8px">Entrer un <b>montant total en $</b>. Le dépôt sera réalisé 50% en ETH et 50% en USDC au prix courant.</div>
-    <div class="two">
+    <div class="note" style="margin-bottom:8px">Entrer un <b>montant total en $</b>. Le dépôt sera réalisé 50% en ETH et 50% en USDC au prix courant. Les champs ci-dessous se remplissent automatiquement.</div>
+    <div class="two" style="margin-bottom:10px">
       <input id="addUsd" class="input" placeholder="Montant en $ (ex: 100)"/>
       <button id="btnAddConfirm" class="btn">Déposer</button>
+    </div>
+    <div class="two">
+      <input id="addEthPreview" class="input" placeholder="≈ ETH" readonly />
+      <input id="addUsdcPreview" class="input" placeholder="≈ USDC" readonly />
     </div>
     <div class="row" style="margin-top:10px;justify-content:flex-end">
       <button id="btnAddCancel" class="btn secondary">Annuler</button>
@@ -290,10 +294,13 @@
     if(!window.ethereum){ toast('Installe MetaMask.'); throw new Error('no wallet'); }
     provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
     const net = await provider.getNetwork();
-    $("#netChip").textContent = `Réseau: ${net.name || net.chainId}`;
+    const labelChain = (id)=> id===8453?'Base':(id===84532?'Base Sepolia':`chain ${id}`);
+    $("#netChip").textContent = `Réseau: ${labelChain(net.chainId)}`;
     if (net.chainId !== CHAIN_ID_DEC){
       try{
         await window.ethereum.request({ method:'wallet_switchEthereumChain', params:[{ chainId: CHAIN_ID_HEX }] });
+        const net2 = await provider.getNetwork();
+        $("#netChip").textContent = `Réseau: ${labelChain(net2.chainId)}`;
       }catch(e){ toast('Change de réseau sur Base Sepolia.'); throw e; }
     }
     const a = (await provider.listAccounts())[0];
@@ -444,6 +451,13 @@
 
   // ========= Pools: dépôt double-sided 50/50 ($)
   $("#btnAddCancel").onclick = ()=>$("#dlgAdd").close();
+  function updateAddPreview(){
+    const usd = parseFloat($("#addUsd").value);
+    if(!isFinite(usd) || usd<=0){ $("#addEthPreview").value=''; $("#addUsdcPreview").value=''; return; }
+    const half = usd/2; $("#addEthPreview").value = fmt(usdToEth(half))+' ETH'; $("#addUsdcPreview").value = fmt(half)+' USDC';
+  }
+  $("#addUsd").oninput = updateAddPreview;
+  $("#btnAddCancel").onclick = ()=>$("#dlgAdd").close();
   $("#btnAddConfirm").onclick = async ()=>{
     try{
       if(!me){ await connect(); }
@@ -452,18 +466,15 @@
       const halfUsd = usd/2;
       const ethAmt  = usdToEth(halfUsd); // en ETH
       const usdcAmt = halfUsd;           // en USDC
-      // 1) deposit ETH
       const vSigner = vault.connect(signer);
       toast('Dépôt ETH en cours…');
       const tx1 = await vSigner.depositETH({ value: ethers.utils.parseEther(String(ethAmt)) });
       await tx1.wait();
-      // 2) approve + deposit USDC
-      const uSigner = usdc.connect(signer);
       const need = ethers.utils.parseUnits(String(usdcAmt), usdcDecimals);
       const allowance = await usdc.allowance(me, VAULT_ADDRESS);
       if(allowance.lt(need)){
         toast('Approve USDC…');
-        const txa = await uSigner.approve(VAULT_ADDRESS, need);
+        const txa = await usdc.connect(signer).approve(VAULT_ADDRESS, need);
         await txa.wait();
       }
       toast('Dépôt USDC…');
@@ -471,7 +482,7 @@
       await tx2.wait();
       toast('Dépôt 50/50 réussi ✅');
       $("#dlgAdd").close();
-      refreshBalances(); refreshTvl();
+      refreshBalances(); refreshTvl(); refreshLeaderboard();
     }catch(e){ console.error(e); toast('Échec du dépôt'); }
   };
 
@@ -515,15 +526,13 @@
   // ========= Leaderboard (events → adresses uniques) + pointsOf
   async function loadParticipants(){
     try{
-      const latest = await provider.getBlockNumber();
-      const fromBlock = Math.max(0, latest - 50000);
       const topics = [
         vault.filters.DepositETH().topics[0],
         vault.filters.DepositUSDC().topics[0],
         vault.filters.WithdrawETH().topics[0],
         vault.filters.WithdrawUSDC().topics[0],
       ];
-      const logs = await provider.getLogs({ fromBlock, toBlock:'latest', address: VAULT_ADDRESS, topics:[topics] });
+      const logs = await provider.getLogs({ fromBlock: 0, toBlock:'latest', address: VAULT_ADDRESS, topics:[topics] });
       const addrs = new Set();
       for(const lg of logs){ if(lg.topics[1]) addrs.add('0x'+lg.topics[1].slice(26)); }
       return Array.from(addrs);
@@ -568,7 +577,7 @@
       if(!who){ $("#mySwapPts").textContent = '—'; return; }
 
       const latest = await provider.getBlockNumber();
-      const fromBlock = Math.max(0, latest - 100000);
+      const fromBlock = 0;
 
       const iface = new ethers.utils.Interface(SWAP_ABI);
       const t1 = iface.getEventTopic("SwapETHforUSDC");
@@ -690,6 +699,7 @@
       price8 = (await swap.ethUsd()).toString();
       $("#priceBox").textContent = '$'+(Number(price8)/1e8).toLocaleString();
       updateQuote();
+      updateAddPreview();
       await refreshTvl();
       await refreshLeaderboard();
       await refreshMySwapPoints();
