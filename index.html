@@ -399,7 +399,22 @@ window.addEventListener('error', (e)=>{
     $("#feeBox").textContent   = (feeBps/100).toFixed(2)+'%';
   }
 
-  /* ========= Helpers UI ========= */
+/* ========= Helpers UI ========= */
+
+// --- Helper: simuler puis estimer, en surfacant la raison d'échec ---
+async function safeSimThenEstimate(fn, args = [], overrides = {}) {
+  try {
+    // Simulation (ne consomme pas de gas)
+    await fn.callStatic(...args, overrides);
+    // Estimation si la simu passe
+    const gas = await fn.estimateGas(...args, overrides);
+    return { ok: true, gas };
+  } catch (e) {
+    const reason = e?.reason || e?.error?.message || e?.message || 'Revert / estimation impossible';
+    return { ok: false, reason, error: e };
+  }
+}
+
   function currentSlippage(){ const v=parseFloat($("#slippage").value || load('cfg_slippage','0.5')); return isFinite(v)&&v>=0?v:0.5; }
   async function updateAllowanceBox(){
     try{
@@ -451,23 +466,48 @@ window.addEventListener('error', (e)=>{
   });
   document.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ const a=document.activeElement; if(a && (a.id==='swapAmount' || a.id==='slippage')) $("#btnSwap").click(); }});
 
-  async function updateGasEstimate(){
-    try{
-      if(!me){ $("#gasBox").textContent='Estimation gas: —'; return; }
-      const from = $("#swapFrom").value, to=$("#swapTo").value;
-      let amt = parseFloat($("#swapAmount").value);
-      if(!isFinite(amt) || amt<=0){ $("#gasBox").textContent='Estimation gas: —'; return; }
-      const s = swap.connect(signer);
-      if(from==='ETH' && to==='USDC'){
-        const g = await s.estimateGas.swapETHforUSDC({ value: ethers.utils.parseEther(String(amt)) });
-        $("#gasBox").textContent = 'Estimation gas: '+ g.toString();
-      } else if(from==='USDC' && to==='ETH'){
-        const u = ethers.utils.parseUnits(String(amt), usdcDecimals);
-        const g = await s.estimateGas.swapUSDCforETH(u);
-        $("#gasBox").textContent = 'Estimation gas: '+ g.toString();
-      } else { $("#gasBox").textContent='Estimation gas: —'; }
-    }catch{ $("#gasBox").textContent='Estimation gas: —'; }
+async function updateGasEstimate(){
+  try{
+    if(!me){ $("#gasBox").textContent='Estimation gas: —'; return; }
+
+    const from = $("#swapFrom").value, to=$("#swapTo").value;
+    let amt = parseFloat($("#swapAmount").value);
+    if(!isFinite(amt) || amt<=0 || !price()){ $("#gasBox").textContent='Estimation gas: —'; return; }
+
+    const s = swap.connect(signer);
+
+    if(from==='ETH' && to==='USDC'){
+      // pré-check liquidité pour éviter une estimation vouée à revert
+      const outUsd = applyFee(amt * price());
+      const usdcBalSwap = Number((await usdc.balanceOf(SWAP_ADDRESS)).toString())/10**usdcDecimals;
+      if(usdcBalSwap < outUsd){
+        $("#gasBox").textContent = 'Estimation gas: bloqué (liquidité USDC insuffisante)';
+        return;
+      }
+      const value = ethers.utils.parseEther(String(amt));
+      const res = await safeSimThenEstimate(s.swapETHforUSDC, [], { value, from: me });
+      $("#gasBox").textContent = res.ok ? ('Estimation gas: ' + res.gas.toString())
+                                        : ('Estimation gas: — (' + res.reason + ')');
+
+    } else if(from==='USDC' && to==='ETH'){
+      // pré-check allowance
+      const usdcIn = ethers.utils.parseUnits(String(amt), usdcDecimals);
+      const allowance = await usdc.allowance(me, SWAP_ADDRESS);
+      if(allowance.lt(usdcIn)){
+        $("#gasBox").textContent = 'Estimation gas: bloqué (allowance USDC insuffisante)';
+        return;
+      }
+      const res = await safeSimThenEstimate(s.swapUSDCforETH, [usdcIn], { from: me });
+      $("#gasBox").textContent = res.ok ? ('Estimation gas: ' + res.gas.toString())
+                                        : ('Estimation gas: — (' + res.reason + ')');
+
+    } else {
+      $("#gasBox").textContent='Estimation gas: —';
+    }
+  }catch(e){
+    $("#gasBox").textContent='Estimation gas: —';
   }
+}
 
   /* ========= TVL / Volumes ========= */
   async function refreshTvl(){
@@ -620,32 +660,63 @@ window.addEventListener('error', (e)=>{
     }catch(e){ console.error(e); toast('Échec approve'); }
   };
   $("#btnSwap").onclick = async ()=>{
-    try{
-      if(!me){ await connect(); }
-      const from = $("#swapFrom").value, to=$("#swapTo").value;
-      let amt = parseFloat($("#swapAmount").value);
-      if(!isFinite(amt) || amt<=0){ toast("Montant invalide"); return; }
-      const out = (from==='ETH')? applyFee(amt*price()) : applyFee(amt/price());
-      const s = swap.connect(signer);
-      if(from==='ETH' && to==='USDC'){
-        // Vérifie la liquidité USDC côté contrat de swap
-        const usdcBalSwap = Number((await usdc.balanceOf(SWAP_ADDRESS)).toString())/10**usdcDecimals;
-        if(usdcBalSwap < out){ toast('Pas assez de liquidité USDC dans le contrat de swap.'); return; }
-        const tx = await s.swapETHforUSDC({ value: ethers.utils.parseEther(String(amt)) });
-        toast("Swap ETH→USDC envoyé…"); await tx.wait(); toast("Swap confirmé ");
-      } else if(from==='USDC' && to==='ETH'){
-        const usdcIn = ethers.utils.parseUnits(String(amt), usdcDecimals);
-        const allowance = await usdc.allowance(me, SWAP_ADDRESS);
-        if(allowance.lt(usdcIn)){
-          const txa = await usdc.connect(signer).approve(SWAP_ADDRESS, usdcIn);
-          toast("Approve USDC…"); await txa.wait();
-        }
-        const tx = await s.swapUSDCforETH(usdcIn);
-        toast("Swap USDC→ETH envoyé…"); await tx.wait(); toast("Swap confirmé ");
-      } else { toast("Sélection invalide."); return; }
-      await refreshBalances(); await refreshTvl(); await refreshMySwapPoints(); updateQuote(); updateAllowanceBox(); await refreshVolumes24h();
-    }catch(e){ console.error(e); const msg=(e && (e.data && e.data.message || e.message)) || 'Échec du swap'; toast(msg); }
-  };
+  try{
+    if(!me){ await connect(); }
+    const from = $("#swapFrom").value, to=$("#swapTo").value;
+    let amt = parseFloat($("#swapAmount").value);
+    if(!isFinite(amt) || amt<=0){ toast("Montant invalide"); return; }
+
+    const s = swap.connect(signer);
+
+    if(from==='ETH' && to==='USDC'){
+      // Vérif liquidité côté contrat de swap
+      const outUsd = applyFee(amt * price());
+      const usdcBalSwap = Number((await usdc.balanceOf(SWAP_ADDRESS)).toString())/10**usdcDecimals;
+      if(usdcBalSwap < outUsd){ toast('Pas assez de liquidité USDC dans le contrat de swap.'); return; }
+
+      // Vérif solde ETH (frais inclus)
+      const need = ethers.utils.parseEther(String(amt));
+      const bal  = await provider.getBalance(me);
+      if(bal.lt(need)){ toast('Solde ETH insuffisant'); return; }
+
+      // Simu + estimation → gasLimit avec marge
+      const overrides = { value: need, from: me };
+      const sim = await safeSimThenEstimate(s.swapETHforUSDC, [], overrides);
+      if(!sim.ok){ toast('Swap impossible: '+sim.reason); return; }
+
+      const gasLimit = sim.gas.mul(12).div(10); // +20%
+      const tx = await s.swapETHforUSDC({ ...overrides, gasLimit });
+      toast("Swap ETH→USDC envoyé…"); await tx.wait(); toast("Swap confirmé ");
+
+    } else if(from==='USDC' && to==='ETH'){
+      const usdcIn = ethers.utils.parseUnits(String(amt), usdcDecimals);
+
+      // Approve si nécessaire (avant la simu)
+      const allowance = await usdc.allowance(me, SWAP_ADDRESS);
+      if(allowance.lt(usdcIn)){
+        const txa = await usdc.connect(signer).approve(SWAP_ADDRESS, usdcIn);
+        toast("Approve USDC…"); await txa.wait();
+      }
+
+      // Simu + estimation → gasLimit avec marge
+      const sim = await safeSimThenEstimate(s.swapUSDCforETH, [usdcIn], { from: me });
+      if(!sim.ok){ toast('Swap impossible: '+sim.reason); return; }
+
+      const gasLimit = sim.gas.mul(12).div(10); // +20%
+      const tx = await s.swapUSDCforETH(usdcIn, { from: me, gasLimit });
+      toast("Swap USDC→ETH envoyé…"); await tx.wait(); toast("Swap confirmé ");
+
+    } else {
+      toast("Sélection invalide."); return;
+    }
+
+    await refreshBalances(); await refreshTvl(); await refreshMySwapPoints(); updateQuote(); await updateAllowanceBox(); await refreshVolumes24h();
+  }catch(e){
+    console.error(e);
+    const msg=(e && (e.data && e.data.message || e.message)) || 'Échec du swap';
+    toast(msg);
+  }
+};
 
   /* ========= Pools ADD/REMOVE 50/50 ========= */
   $("#btnAddCancel").onclick = ()=>$("#dlgAdd").close();
