@@ -401,13 +401,12 @@ window.addEventListener('error', (e)=>{
 
 /* ========= Helpers UI ========= */
 
-// --- Helper: simuler puis estimer, en surfacant la raison d'échec ---
-async function safeSimThenEstimate(fn, args = [], overrides = {}) {
+// --- Helper: simuler puis estimer (ethers v5, sans détacher les méthodes) ---
+async function safeSimThenEstimate(contract, method, args = [], overrides = {}) {
   try {
-    // Simulation (ne consomme pas de gas)
-    await fn.callStatic(...args, overrides);
-    // Estimation si la simu passe
-    const gas = await fn.estimateGas(...args, overrides);
+    // Utiliser l'objet pour garder le bon binding de 'this'
+    await contract.callStatic[method](...args, overrides);
+    const gas = await contract.estimateGas[method](...args, overrides);
     return { ok: true, gas };
   } catch (e) {
     const reason = e?.reason || e?.error?.message || e?.message || 'Revert / estimation impossible';
@@ -485,7 +484,7 @@ async function updateGasEstimate(){
         return;
       }
       const value = ethers.utils.parseEther(String(amt));
-      const res = await safeSimThenEstimate(s.swapETHforUSDC, [], { value, from: me });
+const res = await safeSimThenEstimate(s, 'swapETHforUSDC', [], { value, from: me });
       $("#gasBox").textContent = res.ok ? ('Estimation gas: ' + res.gas.toString())
                                         : ('Estimation gas: — (' + res.reason + ')');
 
@@ -497,7 +496,7 @@ async function updateGasEstimate(){
         $("#gasBox").textContent = 'Estimation gas: bloqué (allowance USDC insuffisante)';
         return;
       }
-      const res = await safeSimThenEstimate(s.swapUSDCforETH, [usdcIn], { from: me });
+const res = await safeSimThenEstimate(s, 'swapUSDCforETH', [usdcIn], { from: me });
       $("#gasBox").textContent = res.ok ? ('Estimation gas: ' + res.gas.toString())
                                         : ('Estimation gas: — (' + res.reason + ')');
 
@@ -681,7 +680,7 @@ async function updateGasEstimate(){
 
       // Simu + estimation → gasLimit avec marge
       const overrides = { value: need, from: me };
-      const sim = await safeSimThenEstimate(s.swapETHforUSDC, [], overrides);
+const sim = await safeSimThenEstimate(s, 'swapETHforUSDC', [], overrides);
       if(!sim.ok){ toast('Swap impossible: '+sim.reason); return; }
 
       const gasLimit = sim.gas.mul(12).div(10); // +20%
@@ -699,7 +698,7 @@ async function updateGasEstimate(){
       }
 
       // Simu + estimation → gasLimit avec marge
-      const sim = await safeSimThenEstimate(s.swapUSDCforETH, [usdcIn], { from: me });
+const sim = await safeSimThenEstimate(s, 'swapUSDCforETH', [usdcIn], { from: me });
       if(!sim.ok){ toast('Swap impossible: '+sim.reason); return; }
 
       const gasLimit = sim.gas.mul(12).div(10); // +20%
