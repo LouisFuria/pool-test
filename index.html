@@ -634,15 +634,23 @@ window.addEventListener('error', (e)=>{
         if(usdcBalSwap < out){ toast('Pas assez de liquidité USDC dans le contrat de swap.'); return; }
         const tx = await s.swapETHforUSDC({ value: ethers.utils.parseEther(String(amt)) });
         toast("Swap ETH→USDC envoyé…"); await tx.wait(); toast("Swap confirmé ✅");
-      } else if(from==='USDC' && to==='ETH'){
-        const usdcIn = ethers.utils.parseUnits(String(amt), usdcDecimals);
-        const allowance = await usdc.allowance(me, SWAP_ADDRESS);
-        if(allowance.lt(usdcIn)){
-          const txa = await usdc.connect(signer).approve(SWAP_ADDRESS, usdcIn);
-          toast("Approve USDC…"); await txa.wait();
-        }
-        const tx = await s.swapUSDCforETH(usdcIn);
-        toast("Swap USDC→ETH envoyé…"); await tx.wait(); toast("Swap confirmé ✅");
+} else if(from==='USDC' && to==='ETH'){
+  const out = applyFee(amt / price());  // Already calculated earlier, but confirming
+  const ethBalSwap = Number(ethers.utils.formatEther(await provider.getBalance(SWAP_ADDRESS)));
+  console.log('Liquidité ETH dans SWAP_ADDRESS:', ethBalSwap, 'vs Out requis:', out);  // For debugging
+  if(ethBalSwap < out){ 
+    toast('Pas assez de liquidité ETH dans le contrat de swap.'); 
+    return; 
+  }
+  const usdcIn = ethers.utils.parseUnits(String(amt), usdcDecimals);
+  const allowance = await usdc.allowance(me, SWAP_ADDRESS);
+  if(allowance.lt(usdcIn)){
+    const txa = await usdc.connect(signer).approve(SWAP_ADDRESS, usdcIn);
+    toast("Approve USDC…"); await txa.wait();
+  }
+  const tx = await s.swapUSDCforETH(usdcIn);
+  toast("Swap USDC→ETH envoyé…"); await tx.wait(); toast("Swap confirmé ✅");
+}
       } else { toast("Sélection invalide."); return; }
       await refreshBalances(); await refreshTvl(); await refreshMySwapPoints(); updateQuote(); updateAllowanceBox(); await refreshVolumes24h();
     }catch(e){ console.error(e); const msg=(e && (e.data && e.data.message || e.message)) || 'Échec du swap'; toast(msg); }
