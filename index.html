@@ -72,7 +72,7 @@
   <!-- SWAP -->
   <section id="swap" class="grid grid-2">
     <div class="card">
-      <div class="h">Swap ETH ↔ USDC · Règle points: <b>10 pts / $ swappé</b></div>
+      <div class="h">Swap ETH  USDC · Règle points: <b>10 pts / $ swappé</b></div>
       <div class="swap-ctrls">
         <select id="swapFrom"><option value="ETH">ETH</option><option value="USDC">USDC</option></select>
         <div style="display:flex;align-items:center;justify-content:center"><button id="btnFlip" class="pill" title="Inverser">⇄</button></div>
@@ -107,14 +107,13 @@
       </div>
     </div>
 
-    <div class="card">
-      <div class="h">Infos (Swap)</div>
-      <div class="stat"><span>Prix ETH/USD</span><span id="priceBox" class="big">$—</span></div>
-      <div class="stat" style="margin-top:10px"><span>Frais</span><span id="feeBox" class="big">—</span></div>
-      <div class="stat" style="margin-top:10px"><span>TVL (équiv. ETH)</span><span id="tvlSwap" class="big">—</span></div>
-      <div class="note">App appuie sur <b>Enter</b> pour lancer le swap.</div>
-    </div>
-  </section>
+<div class="card">
+  <div class="h">Infos (Swap)</div>
+  <div class="stat"><span>Prix ETH/USD</span><span id="priceBox" class="big">$—</span></div>
+  <div class="stat" style="margin-top:10px"><span>Frais</span><span id="feeBox" class="big">—</span></div>
+  <div class="stat" style="margin-top:10px"><span>TVL (équiv. ETH)</span><span id="tvlSwap" class="big">—</span></div>
+  <div class="note">App appuie sur <b>Enter</b> pour lancer le swap.</div>
+</div>  </section>
 
   <!-- POOLS -->
   <section id="pools" style="display:none">
@@ -132,7 +131,7 @@
         </tr></thead>
         <tbody id="poolRows"></tbody>
       </table>
-      <div class="note">⚠️ Le dépôt “Pools” utilise le <b>même</b> contrat que le Vault. Ici, l’ADD réalise automatiquement un dépôt <b>50/50</b> (en $) dans le vault.</div>
+      <div class="note"> Le dépôt “Pools” utilise le <b>même</b> contrat que le Vault. Ici, l’ADD réalise automatiquement un dépôt <b>50/50</b> (en $) dans le vault.</div>
     </div>
   </section>
 
@@ -584,7 +583,7 @@ window.addEventListener('error', (e)=>{
     rows.sort((x,y)=>y.pts-x.pts);
     $("#lbRows").innerHTML = rows.map((r,i)=>`
       <tr>
-        <td>${i===0?'🥇':i+1}</td>
+        <td>${i===0?'':i+1}</td>
         <td><a href="https://base-sepolia.blockscout.com/address/${r.a}" target="_blank">${r.a.slice(0,6)+'…'+r.a.slice(-4)}</a></td>
         <td>${fmt(r.pts,2)}</td>
       </tr>
@@ -617,7 +616,7 @@ window.addEventListener('error', (e)=>{
       const amt = ethers.utils.parseUnits(String(max), usdcDecimals);
       const tx  = await usdc.connect(signer).approve(SWAP_ADDRESS, amt);
       toast("Approve max en cours…");
-      await tx.wait(); toast("Approve confirmé ✅"); updateAllowanceBox();
+      await tx.wait(); toast("Approve confirmé "); updateAllowanceBox();
     }catch(e){ console.error(e); toast('Échec approve'); }
   };
   $("#btnSwap").onclick = async ()=>{
@@ -633,24 +632,16 @@ window.addEventListener('error', (e)=>{
         const usdcBalSwap = Number((await usdc.balanceOf(SWAP_ADDRESS)).toString())/10**usdcDecimals;
         if(usdcBalSwap < out){ toast('Pas assez de liquidité USDC dans le contrat de swap.'); return; }
         const tx = await s.swapETHforUSDC({ value: ethers.utils.parseEther(String(amt)) });
-        toast("Swap ETH→USDC envoyé…"); await tx.wait(); toast("Swap confirmé ✅");
-} else if(from==='USDC' && to==='ETH'){
-  const out = applyFee(amt / price());  // Already calculated earlier, but confirming
-  const ethBalSwap = Number(ethers.utils.formatEther(await provider.getBalance(SWAP_ADDRESS)));
-  console.log('Liquidité ETH dans SWAP_ADDRESS:', ethBalSwap, 'vs Out requis:', out);  // For debugging
-  if(ethBalSwap < out){ 
-    toast('Pas assez de liquidité ETH dans le contrat de swap.'); 
-    return; 
-  }
-  const usdcIn = ethers.utils.parseUnits(String(amt), usdcDecimals);
-  const allowance = await usdc.allowance(me, SWAP_ADDRESS);
-  if(allowance.lt(usdcIn)){
-    const txa = await usdc.connect(signer).approve(SWAP_ADDRESS, usdcIn);
-    toast("Approve USDC…"); await txa.wait();
-  }
-  const tx = await s.swapUSDCforETH(usdcIn);
-  toast("Swap USDC→ETH envoyé…"); await tx.wait(); toast("Swap confirmé ✅");
-}
+        toast("Swap ETH→USDC envoyé…"); await tx.wait(); toast("Swap confirmé ");
+      } else if(from==='USDC' && to==='ETH'){
+        const usdcIn = ethers.utils.parseUnits(String(amt), usdcDecimals);
+        const allowance = await usdc.allowance(me, SWAP_ADDRESS);
+        if(allowance.lt(usdcIn)){
+          const txa = await usdc.connect(signer).approve(SWAP_ADDRESS, usdcIn);
+          toast("Approve USDC…"); await txa.wait();
+        }
+        const tx = await s.swapUSDCforETH(usdcIn);
+        toast("Swap USDC→ETH envoyé…"); await tx.wait(); toast("Swap confirmé ");
       } else { toast("Sélection invalide."); return; }
       await refreshBalances(); await refreshTvl(); await refreshMySwapPoints(); updateQuote(); updateAllowanceBox(); await refreshVolumes24h();
     }catch(e){ console.error(e); const msg=(e && (e.data && e.data.message || e.message)) || 'Échec du swap'; toast(msg); }
@@ -680,7 +671,7 @@ window.addEventListener('error', (e)=>{
       const allowance = await usdc.allowance(me, VAULT_ADDRESS);
       if(allowance.lt(need)){ toast('Approve USDC…'); const txa = await usdc.connect(signer).approve(VAULT_ADDRESS, need); await txa.wait(); }
       toast('Dépôt USDC…'); const tx2 = await vSigner.depositUSDC(need); await tx2.wait();
-      toast('Dépôt 50/50 réussi ✅'); $("#dlgAdd").close();
+      toast('Dépôt 50/50 réussi '); $("#dlgAdd").close();
       await refreshBalances(); await refreshTvl(); await refreshLeaderboard(); await refreshVolumes24h(); await refreshMyVaultPoints();
     }catch(e){ console.error(e); toast('Échec du dépôt'); }
   };
@@ -703,7 +694,7 @@ window.addEventListener('error', (e)=>{
       const vSigner = vault.connect(signer);
       toast('Retrait ETH…'); const tx1 = await vSigner.withdrawETH(ethers.utils.parseEther(String(ethAmt))); await tx1.wait();
       toast('Retrait USDC…'); const tx2 = await vSigner.withdrawUSDC(ethers.utils.parseUnits(String(usdcAmt), usdcDecimals)); await tx2.wait();
-      toast('Retrait 50/50 effectué ✅'); $("#dlgRemove").close();
+      toast('Retrait 50/50 effectué '); $("#dlgRemove").close();
       await refreshBalances(); await refreshTvl(); await refreshLeaderboard(); await refreshVolumes24h(); await refreshMyVaultPoints();
     }catch(e){ console.error(e); toast('Échec du retrait'); }
   };
@@ -726,7 +717,7 @@ window.addEventListener('error', (e)=>{
     if(!isFinite(v)||v<=0){ toast('Montant invalide'); return; }
     try{
       const tx = await vault.connect(signer).depositETH({ value: ethers.utils.parseEther(String(v)) });
-      await tx.wait(); toast('Déposé ✅'); await refreshBalances(); await refreshTvl(); await refreshLeaderboard(); await refreshVolumes24h(); await refreshMyVaultPoints();
+      await tx.wait(); toast('Déposé '); await refreshBalances(); await refreshTvl(); await refreshLeaderboard(); await refreshVolumes24h(); await refreshMyVaultPoints();
     }catch(e){ console.error(e); toast('Échec du dépôt'); }
   };
   $("#btnVaultDepositUSDC").onclick = async ()=>{
@@ -738,7 +729,7 @@ window.addEventListener('error', (e)=>{
       const allowance = await usdc.allowance(me, VAULT_ADDRESS);
       if(allowance.lt(amt)){ const txa = await usdc.connect(signer).approve(VAULT_ADDRESS, amt); await txa.wait(); }
       const tx = await vault.connect(signer).depositUSDC(amt);
-      await tx.wait(); toast('Déposé ✅'); await refreshBalances(); await refreshTvl(); await refreshLeaderboard(); await refreshVolumes24h(); await refreshMyVaultPoints();
+      await tx.wait(); toast('Déposé '); await refreshBalances(); await refreshTvl(); await refreshLeaderboard(); await refreshVolumes24h(); await refreshMyVaultPoints();
     }catch(e){ console.error(e); toast('Échec du dépôt'); }
   };
   $("#btnVaultWithdrawETH").onclick = async ()=>{
@@ -747,7 +738,7 @@ window.addEventListener('error', (e)=>{
     if(!isFinite(v)||v<=0){ toast('Montant invalide'); return; }
     try{
       const tx = await vault.connect(signer).withdrawETH(ethers.utils.parseEther(String(v)));
-      await tx.wait(); toast('Retiré ✅'); await refreshBalances(); await refreshTvl(); await refreshLeaderboard(); await refreshVolumes24h(); await refreshMyVaultPoints();
+      await tx.wait(); toast('Retiré '); await refreshBalances(); await refreshTvl(); await refreshLeaderboard(); await refreshVolumes24h(); await refreshMyVaultPoints();
     }catch(e){ console.error(e); toast('Échec du retrait'); }
   };
   $("#btnVaultWithdrawUSDC").onclick = async ()=>{
@@ -756,7 +747,7 @@ window.addEventListener('error', (e)=>{
     if(!isFinite(v)||v<=0){ toast('Montant invalide'); return; }
     try{
       const tx = await vault.connect(signer).withdrawUSDC(ethers.utils.parseUnits(String(v), usdcDecimals));
-      await tx.wait(); toast('Retiré ✅'); await refreshBalances(); await refreshTvl(); await refreshLeaderboard(); await refreshVolumes24h(); await refreshMyVaultPoints();
+      await tx.wait(); toast('Retiré '); await refreshBalances(); await refreshTvl(); await refreshLeaderboard(); await refreshVolumes24h(); await refreshMyVaultPoints();
     }catch(e){ console.error(e); toast('Échec du retrait'); }
   };
 
