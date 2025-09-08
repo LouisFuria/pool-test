@@ -256,7 +256,7 @@ window.addEventListener('error', (e)=>{
 (async function(){
   /* ========= CONFIG ========= */
   const CHAIN_ID_DEC = 84532;             // Base Sepolia
-  const CHAIN_ID_HEX = '0x14A54';
+const CHAIN_ID_HEX = '0x14A34'; // 84532 en hex
   const SWAP_ADDRESS  = '0x9965B8ef813E6247c6788AF7836756a579474484'; // FixedPriceSwap (points swap via events)
   const VAULT_ADDRESS = '0x1720e9ef567d1f29076EcE7E47CBc5F12F52F335'; // Vault with Points (pendingPointsScaled)
   const USDC_ADDRESS  = '0x3F532813FEB32E1990d9c7Ca8Cb29b62C573512B'; // USDCMock
@@ -401,18 +401,45 @@ window.addEventListener('error', (e)=>{
 
 /* ========= Helpers UI ========= */
 
-// --- Helper: simuler puis estimer (ethers v5, sans détacher les méthodes) ---
+// --- Helper: simuler + estimer avec décodage du revert (ethers v5) ---
 async function safeSimThenEstimate(contract, method, args = [], overrides = {}) {
+  const decodeReason = (err) => {
+    // 1) essaye d’extraire le revert data
+    let data = err?.error?.data?.originalError?.data
+            || err?.error?.data
+            || err?.data;
+
+    // certains providers mettent le JSON dans e.body
+    if (!data && typeof err?.body === 'string') {
+      try { data = JSON.parse(err.body)?.error?.data; } catch {}
+    }
+
+    // 2) si on a un hex, tente un parse via l’ABI
+    if (typeof data === 'string' && data.startsWith('0x')) {
+      try {
+        const parsed = contract.interface.parseError(data);
+        if (parsed && parsed.name) {
+          const argsTxt = (parsed.args && parsed.args.length)
+            ? '(' + parsed.args.map(a => a.toString()).join(',') + ')'
+            : '';
+          return parsed.name + argsTxt;
+        }
+      } catch {}
+    }
+
+    // 3) fallback messages
+    return err?.reason || err?.shortMessage || err?.error?.message || err?.message || 'execution reverted';
+  };
+
   try {
-    // Utiliser l'objet pour garder le bon binding de 'this'
     await contract.callStatic[method](...args, overrides);
     const gas = await contract.estimateGas[method](...args, overrides);
     return { ok: true, gas };
   } catch (e) {
-    const reason = e?.reason || e?.error?.message || e?.message || 'Revert / estimation impossible';
-    return { ok: false, reason, error: e };
+    return { ok: false, reason: decodeReason(e), error: e };
   }
 }
+
 
   function currentSlippage(){ const v=parseFloat($("#slippage").value || load('cfg_slippage','0.5')); return isFinite(v)&&v>=0?v:0.5; }
   async function updateAllowanceBox(){
